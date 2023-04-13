@@ -11,6 +11,9 @@ always_allow_html: true
 ```{r set-up, include=FALSE, message = F, warning = F}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::knit_child("Midterm-Report.Rmd")
+
+install.packages('plotly')
+library(plotly)
 ```
 
 
@@ -33,7 +36,7 @@ coordinates <- merge(
     by.y = 'Hood_ID'
   )
 
-pal <- colorNumeric("viridis", NULL)
+pal <- colorNumeric("magma", NULL)
 
 map_crime <- leaflet(coordinates) %>%
   addTiles() %>%
@@ -97,3 +100,85 @@ map_crime <- leaflet(coordinates) %>%
 
 map_crime
 ```
+
+
+# Major Crime Indicator Offences per Day by Type
+
+We also inspected the trend of offence occurrences with respect to time in 2016 with the histogram below. The trend shown in the plot suggests that there were no significant relationship between the day of year and the number of major crime occurred, as the plot appears to be close to a uniform distribution with only minor fluctuations periodically. The spike at Day 0 is due to the fact the some data with missing date were marked with 0, but these were kept in our cleaned data since we cared more about the number of occurrences instead of crimes at a specific date.
+
+```{r crime-rate-by-time, echo = F, fig.width=12}
+
+
+crime_rate_by_day <- crimes_cleaned %>%
+  ggplot(aes(x = occurrencedayofyear, fill = mci_category)) +
+  geom_histogram(binwidth = 2) + 
+  labs(
+    title = 'Number Major Crime Indicator Offences\nby Day of Year in Toronto (2016)\n\n\n',
+    x = '\nDay of Year\n',
+    y = '\nCount\n',
+    caption = 'The stacked bar plot shows the distribution of the five Major Crime Indicator categories\nby day of year in Toronto in 2016.',
+    fill = 'MCI Category'
+  ) +
+  theme(axis.text=element_text(size=14),
+        title = element_text(size=20),
+        legend.text = element_text(size=14)
+  )
+
+p <- ggplotly(crime_rate_by_day) %>%
+  layout(barmode = "stack")
+
+for (i in 1:length(p$x$data)) {
+  p$x$data[[i]]$base <- c()
+  # tmp <- p$x$data[[i]]
+  # p$x$data[[i]] <- p$x$data[[length(p$x$data) - i + 1]]
+  # p$x$data[[length(p$x$data) - i + 1]] <- tmp
+}
+
+p
+```
+
+
+# Crime and Income by Neighbourhood
+
+The scatterplot below shows the relationship between the total number of crimes and income of all 140 Toronto neighbourhoods. The size of each point is proportional to the population size of the corresponding Neighbourhood. From the vertical spread of dots around the lower end of the income axis, it shows that income alone does not dictate the distribution of crime completely, as the number of crime offences occurred vary greatly for similar income ranges.
+
+```{r crime-vs-pop-scatter, echo = F, message = F, warning = F}
+crime_vs_income_and_pop <- merge(
+  x = profiles_population_rel,
+  y = crime_vs_income ,
+  all.x = T,
+  all.y = T,
+  by.x = 'Neighbourhood',
+  by.y = 'Neighbourhood'
+) 
+
+
+crime_vs_income_and_pop %>% 
+  plot_ly(
+    x = ~ .[[3]],
+    y = ~ Total,
+    size = ~ .[[2]],
+    color = ~ Neighbourhood,
+    type = 'scatter',
+    marker = list(sizemode = "area", opacity = .8)
+  ) %>%
+  layout(title = 'Crime and Income by Toronto Neighbourhoods', xaxis = list(title = 'Income taxes: Average amount (CAD)'), 
+         yaxis = list(title = 'Total MCI Occurrence'), legend = list(title=list(text='<b> Neighbourhood </b>')))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
