@@ -1,0 +1,11 @@
+name: "JSC370 Final Project - Toronto Neighbourhood Crime"
+output_dir: '.'
+navbar:
+  title: "Toronto Neighbourhood Crime"
+  left:
+    - text: "Home"
+      href: index.html
+    - text: "Midterm Report"
+      href: Midterm.html
+    - text: "Interactive Visualizations"
+      href: Interactive-Visuals.html

@@ -1,0 +1,1099 @@
+---
+title: "Toronto Neighbourhood Crime"
+subtitle: "Examining the relationship between Neighbourhood Crime Rate and Demographic Data in Toronto's 140 historical neighbourhoods in 2016"
+author: "C.Y. Yan"
+date: "10 March 2022"
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+always_allow_html: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# install.packages('opendatatoronto')
+# install.packages("gt")
+# install.packages("cowplot")
+# install.packages('rgdal')
+#install.packages('papeR')
+#install.packages("flextable")
+
+library(flextable)
+library(opendatatoronto)
+library(gt)
+library(broom)
+library(knitr)
+library(ggplot2)
+library(cowplot)
+library(tidyverse)
+library(leaflet)
+library(knitr)
+library(car)
+library(papeR)
+library(rgdal)
+library(htmlwidgets)
+```
+
+```{r loading-data-1, include = F}
+# identifier <- 'major-crime-indicators'
+# 
+#   
+# # get all resources for this package
+# resources <- list_package_resources(identifier)
+# 
+# # identify datastore resources; by default, Toronto Open Data sets datastore resource format to CSV for non-geospatial and GeoJSON for geospatial resources
+# datastore_resources <- filter(resources, tolower(format) %in% c('csv'))
+# 
+# # load the first datastore resource as a sample
+# crimes <- filter(datastore_resources, str_detect(name, '.csv')) %>% get_resource()
+
+# API changed the dataset column names, thus rendering the code useless. Used the old downloaded dataset copy.
+crimes <- read.csv('data/major-crime-indicators.csv')
+```
+
+
+```{r loading-data-2, include = F}
+# identifier <- '6e19a90f-971c-46b3-852c-0c48c436d1fc'
+# 
+# # get all resources for this package
+# resources <- list_package_resources(identifier)
+# 
+# # identify datastore resources; by default, Toronto Open Data sets datastore resource format to CSV for non-geospatial and GeoJSON for geospatial resources
+# datastore_resources <- filter(resources, tolower(format) %in% c('csv'))
+# 
+# # load the first datastore resource as a sample
+# profiles <- filter(datastore_resources, str_detect(name, '2016') & str_detect(name, '.csv')) %>% get_resource()
+
+# API changed the dataset column names, thus rendering the code useless. Used the old downloaded dataset copy.
+profiles <- read.csv('./data/neighbourhood-profiles-2016-140-model.csv')
+```
+
+
+# Introduction
+
+This research study aims to explore the relationship between crime rate and neighbourhoods in the city of Toronto in 2016. Past studies showed that neighbourhood characteristics were significant factors of determining the crime rate of an area (Foster et.al 2010^[Foster, S., Giles-Corti, B., & Knuiman, M. (2010). Neighbourhood design and fear of crime: A social-ecological examination of the correlates of residents’ fear in new suburban housing developments. In Health &amp; Place (Vol. 16, Issue 6, pp. 1156–1165). Elsevier BV. https://doi.org/10.1016/j.healthplace.2010.07.007]). Neighbourhood characteristics include many factors, including social-economic factors such as number of businesses, amount of parks and green space, and transit access, and human factors such as community belonging and quality of local communities (Statistics Canada 2021^[Statistics Canada. (2021). Neighbourhood characteristics and life satisfaction of individuals in lower-, middle-, and higher-income families in Canadian metropolitan areas. Government of Canada. https://doi.org/10.25318/36280001202100500006-ENG]). In this study, we aim to explore the relationship between the demographics and crime rate of neighbourhoods. By understanding this relationship, the government and local communities could respond more effectively when signs of increasing crime rate emerge.
+
+
+From 1996 to 2021, the City of Toronto was divided into 140 historical neighbourhoods. Since 12 April 2022, Toronto's social planning neighbourhoods have changed and the number of neighbourhoods increased to 158. This research used the historical neighbourhoods planning, since all data were collected prior to 2022. The sources of data used come from two sources: [the City of Toronto's Open Data Portal](https://www.toronto.ca/city-government/data-research-maps/open-data/) and [Statistics Canada](https://www.statcan.gc.ca/en/start). Crime rates and police-reported crimes were collected from the former source, while the latter provided census data via Census of Population, which contained information about people and housing units in Canada by their demographics, social and economic characteristics^[Government of Canada, S. C. (2020, July 17). Census of population. Surveys and statistical programs. Retrieved March 13, 2023, from https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&amp;SDDS=3901]. The census data provided information about the demographics of neighbourhoods, including the distribution of age, employment status, immigration and citizenship status and much more.
+
+
+We first identified the main demographics factors which were thought to be highly correlated with neighbourhood crime rates, by looking into past studies of similar research areas. Crime rates were found to be lower in neighbourhoods with higher proportions of senior citizens and immigrants, and in neighbourhoods which were further away from the urban city centers^[Statistics Canada. (n.d.). Main article. Neighbourhood Characteristics and the Distribution of Police-reported Crime in the City of Toronto. Retrieved March 13, 2023, from https://www150.statcan.gc.ca/n1/pub/85-561-m/2009018/part-partie1-eng.htm]. The proportion of visible minorities and racial heterogeneity were also found to be correlated to neighbourhood crime rates^[Sun, Ivan Y.; Triplett, Ruth A.; and Gainey, Randy R., "Neighborhood Characteristics and Crime: A Test of Sampson and Groves' Model of Social Disorganization" (2004). Sociology & Criminal Justice Faculty Publications. 3.
+https://digitalcommons.odu.edu/sociology_criminaljustice_fac_pubs/3]. These studies provided preliminary insights for us to select the important variables and observations from thousands of features in the census data.
+
+From the Neighbourhood Profiles/Census dataset, we identified characteristics of neighbourhoods which we thought were significant on neighbourhood crime rate, based on our findings above. These demographic characteristics include: age, level of education, employment status, immigration and citizenship status, average income tax, number of visible minorities, and population count.
+
+
+This report outlines the process of data collection, exploratory data analysis, and preliminary testing, and includes a conclusion of our initial findings and suggestions of further analysis.
+
+
+
+
+
+# Methods
+
+## Data Collection
+
+To answer our research question, data were collected from The City of Toronto's Open Data Portal, the official source for Toronto open data from city divisions and agencies^[https://open.toronto.ca/]. The datasets of interest are "Major Crime Indicators" and "Neighbourhood Profiles". Both datasets readily available for download on Open Toronto as a CSV, JSON or XML format, or by using the Open Data Portal API. We retrieved the data through the portal's API, by installing the R package <code>opendatatoronto</code> and following the instructions in the "For Developers" section^[See https://open.toronto.ca/dataset/neighbourhood-profiles/ and https://open.toronto.ca/dataset/major-crime-indicators/]. An additional dataset, "Neighbourhoods", was also used for creating a map visualization of crime rate; the dataset contains the coordinates of the boundaries of the 140 historical neighbourhoods in Toronto. The dataset was downloaded manually as a geojson file as the API had a bug with geojson files.
+
+## Dataset Introduction - Major Crime Indicators
+
+This dataset contains all Major Crime Indicators (MCI) occurrences in 140 historical neighbourhoods in Toronto with reported date in between 1 January 2014 and 30 June 2022. The Major Crime Indicators are divided into five categories: Assault, Break and Enter, Auto Theft, Robbery and Theft Over. The Indicators excludes the Sexual Violation offences.
+
+The variables of interest include the MCI category (<code>mci_category</code>), the offence (<code>Offence</code>), the neighbourhood of occurrence (<code>Neighbourhood</code>), and the occurrence and reported date and time. According to the dataset description^[https://open.toronto.ca/dataset/major-crime-indicators/], the data is provided at the offence and/or victim level, thus one occurrence of a crime major appear several times, each associated with different MCI categories; that is, an offence could be categorized into several categories and reported multiple times in the data.
+
+
+Table 1 in the Appendix shows the top four rows of the raw data. Descriptions of the variables can be found in the [Public Safety Data Portal: Open Data Documentation](https://torontops.maps.arcgis.com/sharing/rest/content/items/c0b17f1888544078bf650f3b8b04d35d/data), or in the "Data Cleaning" section below.
+
+
+
+
+
+## Dataset Introduction - Neighbourhood Profiles
+
+This dataset includes census data of the 140 neighbourhoods in the City of Toronto in 2016. It contains over 2300 features of the neighbourhoods, spanning areas such as population, language, income, housing, education, and labour. There are over 2300 rows in the dataset, each representing a characteristic (feature) among the 50 topics, including marital status, income of individuals etc. Each characteristic has several sub-characteristics, for example, for the income response, there were different levels of income (\$10000-\$14999, \$15000-\$19999 etc.).
+
+The data were originally collected through the Census of Population conducted nationwide by Statistical Canada, which did not release the complete data at the level of individual neighbourhoods. However, it was aggregated by Toronto Open Data into the levels of neighbourhood and the result was summarized in this dataset. Nonetheless, a small amount of data released in the Census could not be aggregated to the levels of neighbourhoods, such as summaries of income distribution of residents in the City of Toronto as a whole. This did not deter our study as the amount of data not released at the level of neighbourhoods were significantly less than not, and the variables we chose were not part of the set of affected variables.
+
+
+Note that Statistics Canada carry out random rounding reporting practices, which may have an effect on aggregated statistics such as median, percentages and mean of groups with low number of observations^[https://open.toronto.ca/dataset/neighbourhood-profiles/].
+
+
+Table 2 in the Appendix below shows the top four rows of the raw data. Descriptions of the variables can be found in the [Public Safety Data Portal: Open Data Documentation](https://torontops.maps.arcgis.com/sharing/rest/content/items/c0b17f1888544078bf650f3b8b04d35d/data), or in the "Data Cleaning" section below.
+
+
+
+## Data Cleaning and Wrangling
+
+### Cleaning "Major Crime Indicators"
+
+```{r data-summary, eval = F, include = F}
+# Major Crime Indicators
+summary(crimes)
+str(crimes)
+sum(is.na(crimes))
+
+(unique(crimes$offence))
+
+# Neighbourhood Profiles
+summary(profiles)
+str(profiles)
+sum(is.na(profiles))
+```
+
+We inspected and read the datasets using R functions such as <code>summary</code>, <code>str</code>, <code>dim</code>, <code>head</code>, <code>is.na</code> and functions from the <code>tidyverse</code> package to group and filter the data to better understand the characteristics of the data by different groups.
+
+
+For the "Major Crime Indicators" dataset, unwanted variables were first removed. They included: <code>X_id</code> (unique identifier), <code>event_unique_id</code> (event identifier), <code>Division</code> (Police Division where offence occurred), <code>ucr_code</code> (UCR code for offence), <code>ucr_ext (UCR extension for offence)</code>, and <code>Hood_ID</code> (identifier of neighbourhood). 
+
+```{r crimes-remove-var, include = F}
+crimes_cleaned <- crimes
+
+crimes_cleaned <- crimes_cleaned[ , -which(names(crimes_cleaned) %in% c('X_id', 'event_unique_id', 'Division', 'ucr_code', 'ucr_ext'))]
+```
+
+The remaining wanted variables contained information about the occurrence time and date (in variables <code>occurrencedate</code>, <code>occurrenceyear</code>, <code>occurrencemonth</code>, <code>occurrenceday</code>, <code>occurrencedayofyear</code>, <code>occurrencedayofweek</code>, <code>occurrencehour</code>), the reported time and date (in variables <code>reporteddate</code>, <code>reportedyear</code>, <code>reportedmonth</code>, <code>reportedday</code>, <code>reporteddayofyear</code>, <code>reporteddayofweek</code>, <code>reportedhour</code>), the location (in variables <code>location_type</code>, <code>premises_type</code>, <code>Neighbourhood</code>), and the crime offence (in variables <code>Offence</code> and <code>MCI</code>).
+
+
+
+Observations not from 2016 were also removed from the "Major Crime Indicators" dataset, since we were only interested in reported offences which occurred in 2016. We also removed observations where the neighbourhood was missing, which was represented by "NSA" (stands for "Not Specified Area") in the data.
+
+```{r crimes-remove-obs, include = F}
+crimes_cleaned <- 
+  crimes_cleaned %>%
+  filter(occurrenceyear == 2016 & Neighbourhood != 'NSA')
+
+summary(crimes_cleaned)
+```
+
+This concluded the data cleaning for the "Major Crime Indicators" dataset. Table 3 in the Appendix below shows the top four rows of the cleaned data.
+
+
+
+### Cleaning "Neighbourhood Profiles"
+
+As mentioned in the introduction, the "Neighbourhood Profiles" dataset contains characteristics (features) which have sub-characteristics (sub-features) themselves. However, these sub-characteristics are all listed under the same column (same variable) as the parent characteristic, except they are indented by varying degrees based on the sub-characteristic relationships (i.e. a sub-sub-characteristic is indented more than a sub-characteristics, and so on). Moreover, some of the rows in the data are in complete wrong order, which makes the indentation worthless. This made data cleaning very inefficient and prone to error. For example, two sub-characteristics with very similar description are placed in the same indentation under the two characteristics of similar type (in the wrong order), which makes it impossible to distinguish which sub-characteristics belongs to which parent. To tackle this problem, we first identify the main characteristics wanted before cleaning the sub-characteristics.
+
+
+```{r echo = F, warning=F,message=F}
+crimes_by_neighbourhood <- crimes_cleaned %>%
+  group_by(Neighbourhood, mci_category, Hood_ID) %>%
+  dplyr::summarise(count = n()) %>%
+  pivot_wider(names_from = mci_category, values_from = count) %>%
+  replace(is.na(.), 0) %>%
+  mutate(Total = rowSums(across(-Hood_ID), na.rm = T)) %>%
+  mutate(Neighbourhood = str_replace_all(Neighbourhood, '[-/\\.]', ' ')) 
+
+```
+
+Thus, we adopted the following approach: we first remove the "Data Source" column (which defines the data source - unrelated variable) and divided the dataset into 50 tibbles, each representing a different topic with varying number of (sub-)characteristics. Then, we chose and cleaned only the features (characteristics) wanted: age, level of education, employment status, immigration and citizenship status, average income tax, number of visible minorities, and population count. We kept these features in separate tables for the purpose of preliminary testing individually. Note that some of these subtables still suffered from faulty arrangements and we could only use a subset of these subtables in our study.
+
+
+```{r profiles-divide, echo = F, include = F}
+profiles_cleaned <- profiles
+profiles_cleaned <- profiles_cleaned[-c(4)]
+colnames(profiles_cleaned)[-c(1:5)] <- crimes_by_neighbourhood$Neighbourhood
+
+remove_commas <- function(x) {
+  as.numeric(
+    gsub(',', 
+         '', 
+         gsub('%', '', x)
+         
+    )
+  )
+}
+
+profiles_cleaned <- profiles_cleaned %>%
+  mutate_at(c(5:145), remove_commas)
+
+profiles_cleaned
+```
+
+```{r profiles-explore-topics, echo = F, include = F, eval = F}
+topics <- profiles_cleaned %>% group_by(Topic)
+profiles_by_topic <- group_split(topics)
+keys <- group_keys(topics)
+keys <- keys %>% map_chr(~ str_c(., collapse = ","))
+keys <- strsplit(keys, split=",")
+keys <- keys$Topic
+```
+
+
+```{r profiles-age, echo = F, include = F}
+profiles_age <- profiles_cleaned %>% filter(Topic == 'Age characteristics')
+profiles_age <- profiles_age[!grepl('Male|Female', profiles_age$Characteristic) , ]
+profiles_age
+```
+
+```{r profiles-employment, echo = F, include = F}
+employement_status <- c('Did not work', 'Worked full year, full time', 'Worked part year and/or part time')
+
+profiles_employment <- profiles_cleaned %>% filter(Topic == 'Work activity during the reference year') %>%
+  filter(str_detect(Characteristic, paste(employement_status, collapse='|')))
+
+profiles_employment
+```
+
+```{r profiles-citizenship, echo = F, include = F}
+citizenship_status <- c('Canadian citizens$')
+
+profiles_citizenship <- profiles_cleaned %>% filter(Topic == 'Citizenship') %>%
+  filter(str_detect(Characteristic, paste(citizenship_status, collapse='|')))
+
+profiles_citizenship
+
+```
+
+```{r profiles-education, echo = F, include = F}
+education_status <- c('No certificate, diploma or degree', 'school diploma', 'Postsecondary certificate, diploma or degree')
+
+profiles_education <- profiles_cleaned %>% filter(Topic == 'Highest certificate, diploma or degree') %>%
+  filter(str_detect(Characteristic, paste(education_status, collapse='|'))) %>%
+  arrange(X_id) %>%
+  head(n = 3)
+
+profiles_education
+
+```
+
+
+```{r profiles-population, echo = F, include = F}
+profiles_population <- profiles_cleaned %>% filter(Topic == 'Population and dwellings') %>%
+  filter(Characteristic == 'Population, 2016')
+
+profiles_population
+
+```
+
+```{r profiles-minority, echo = F, include = F}
+minority <- c('Total visible minority population', 'Not a visible minority')
+
+profiles_minority <- profiles_cleaned %>% filter(Topic == 'Visible minority population') %>%
+  filter(str_detect(Characteristic, paste(minority, collapse='|')))
+
+profiles_minority
+
+```
+
+```{r profiles-immigrant, echo = F, include = F}
+immigration_status <- c('Non-immigrants', 'Immigrants', 'Non-permanent residents')
+
+profiles_immigrant <- profiles_cleaned %>% filter(Topic == 'Immigrant status and period of immigration') %>%
+  filter(str_detect(Characteristic, paste(immigration_status, collapse='|')))
+
+profiles_immigrant
+
+
+```
+
+```{r profiles-income-tax, echo = F, include = F}
+income_tax_status <- c('Income taxes: Average amount')
+
+profiles_income_tax <- profiles_cleaned %>% filter(Topic == 'Income taxes')  %>%
+  filter(str_detect(Characteristic, paste(income_tax_status, collapse='|')))
+
+
+profiles_income_tax
+
+
+```
+
+```{r profiles-wanted-features, echo = F, include = F}
+
+profiles_wanted_features <- rbind(profiles_age, profiles_education)
+# profiles_wanted_features <- rbind(profiles_wanted_features, profiles_citizenship)
+profiles_wanted_features <- rbind(profiles_wanted_features, profiles_employment)
+profiles_wanted_features <- rbind(profiles_wanted_features, profiles_immigrant)
+profiles_wanted_features <- rbind(profiles_wanted_features, profiles_income_tax)
+profiles_wanted_features <- rbind(profiles_wanted_features, profiles_minority)
+profiles_wanted_features <- rbind(profiles_wanted_features, profiles_population)
+
+
+profiles_wanted_features_by_neighbourhood <- profiles_wanted_features %>%
+  pivot_longer(cols = names(profiles_wanted_features)[5:145], values_to = 'Values', names_to = 'Neighbourhood') %>%
+  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) # Remove the '.' from the string
+
+
+profiles2 <- profiles_wanted_features_by_neighbourhood
+```
+
+
+```{r merge-data, echo = F, include = F}
+
+profiles_wanted_features  %>%
+  dplyr::select(c(Category, Characteristic, `City.of.Toronto`, Annex)) %>%
+  rename("Toronto" = "City.of.Toronto") %>%
+  gt() %>%
+  tab_header(
+    title = 'Variables of Interests from Neighbourhood Profiles (Subset) (2016)',
+    subtitle = 'This table only shows the variables for the City of Toronto and one of its neighbourhood, Annex, as a subset example.'
+  ) %>%
+  tab_style(
+    style = cell_borders(
+      sides = 'all',
+      color = "black",
+      weight = px(1.5),
+      style = "solid"
+    ),
+    locations = cells_body(
+      columns = everything(),
+      rows = everything()
+    )
+  ) %>%
+  opt_stylize(style = 6, color = "cyan") %>%
+  tab_options(table.width = pct(100))
+
+
+```
+
+# Data Exploration
+
+After data cleaning, we performed data exploration by plotting the summaries of the Major Crime Indicators to better understand the underlying distributions of the data and how they affect one another, using the <code>ggplot2</code> and <code>leaflet</code> libraries.
+
+## Distribution of Crime
+
+The plot below shows the number of occurrences of crimes by the five Major Crime Indicator categories in 2016. From the bar plot, assault was the most common crime in 2016, having 18692 occurrences among 33056 cases of offences (56.5%). The next category with highest occurrence is "break and enter", with a count of 6398 times (about one-third of "Assault" cases).
+
+```{r crime-count, echo = F, fig.height=9, fig.width=18}
+
+crimes_cleaned %>%
+  ggplot(aes(mci_category, fill=mci_category)) +
+  geom_bar(show.legend = F) + 
+  labs(
+    title = 'Number of Occurrence by Major Crime Indicator Categories in Toronto (2016)\n',
+    x = '\nMajor Crime Indicator Categories\n',
+    y = 'Count',
+    caption = 'The bar plot shows the distribution of the five Major Crime Indicator categories in Toronto in 2016.'
+  ) +
+  ylim(c(0, 25000)) +
+  geom_text(stat='count', aes(label=after_stat(count)), vjust=-1) +
+  theme_bw()
+
+
+```
+
+To inspect where these major crimes occurred, two stacked bar plots were created, which showed the distribution of crime occurrences and where they occurred. From these plots, there were some interesting observations: first, "assault" was the predominant crime in the seven premises type shown below, especially in Transit where it was about seven times more likely to occur than all the other four crimes. This suggested that neighbourhoods with large transit hubs were more likely to suffer from assault offences, or neighbourhoods with a higher population density; second, nearly half of the "auto theft" offences occurred outside. This suggested that neighbourhoods with more indoor or underground parking spaces might be less susceptible to auto theft; third, the number of crimes occurred in houses were about 80% of that in apartments, but assuming that apartments usually house many more people than a house could, this suggested that the number of offences per person might be higher in houses (which appear in less busy areas) than apartments (which are often in city centers).
+
+
+
+```{r crime-count-by-premise, echo = F, fig.height=9, fig.width=18}
+
+crime_by_premise <- crimes_cleaned %>%
+  ggplot(aes(x = premises_type, fill = mci_category)) +
+  geom_bar() + 
+  coord_flip() + 
+  labs(
+    title = 'Number of Occurrence\nby Major Crime Indicator Categories\nby Premise Type in Toronto (2016)\n',
+    x = '\nPremise Type\n',
+    y = '\nCount\n',
+    caption = 'The stacked bar plot shows the distribution of the five Major Crime Indicator categories\nby premise type in Toronto in 2016.',
+    fill = 'MCI Category'
+  ) +
+  theme(axis.text=element_text(size=14),
+        title = element_text(size=20),
+        legend.text = element_text(size=14)
+  )
+
+crime_by_category <- crimes_cleaned %>%
+  ggplot(aes(fill = premises_type, x = mci_category)) +
+  geom_bar() + 
+  coord_flip() + 
+  labs(
+    title = 'Premise of Occurrence\nby Crime Indicator Categories\nin Toronto (2016)\n',
+    x = '\nMajor Crime Indicator Categories\n',
+    y = '\nCount\n',
+    caption = 'The stacked bar plot shows the distribution of premise of occurence\nby the five Major Crime Indicator categories in Toronto in 2016.',
+    fill = 'Premises Type'
+  ) +
+  theme(axis.text=element_text(size=14),
+        title = element_text(size=20),
+        legend.text = element_text(size=14)
+  )
+
+plot_grid(crime_by_premise, crime_by_category, ncol=2)
+```
+
+
+We also inspected the trend of offence occurrences with respect to time in 2016 with the histogram below. The trend shown in the plot suggests that there were no significant relationship between the day of year and the number of major crime occurred, as the plot appears to be close to a uniform distribution with only minor fluctuations periodically. The spike at Day 0 is due to the fact the some data with missing date were marked with 0, but these were kept in our cleaned data since we cared more about the number of occurrences instead of crimes at a specific date.
+
+```{r crime-by-time, echo = F, fig.height=9, fig.width=18}
+
+
+crimes_cleaned %>%
+  ggplot(aes(x = occurrencedayofyear, fill = mci_category)) +
+  geom_histogram(binwidth = 2) + 
+  labs(
+    title = 'Number of Occurrence by Major Crime Indicator Categories\nby Day of Year in Toronto (2016)\n',
+    x = '\nDay of Year\n',
+    y = '\nCount\n',
+    caption = 'The stacked bar plot shows the distribution of the five Major Crime Indicator categories\nby day of year in Toronto in 2016.',
+    fill = 'MCI Category'
+  ) +
+  theme(axis.text=element_text(size=14),
+        title = element_text(size=20),
+        legend.text = element_text(size=14)
+  )
+
+```
+
+
+
+The following barplot shows the Top 10 Neighbourhoods sorted by the number of major crime occurrences in 2016 in descending order. The results did not come as surprising, as the neighbourhood with the most population (Waterfront Communities Population: 65913) had the highest crime occurrences. Busy city centres were also in the plot (Bay Street, Church-Yonge). Interestingly, West Humber Clairville had significantly more auto theft offences compared to the other neighbourhoods, which was 80% of all the other 9 neighbourhoods combined (318 vs 385).
+
+```{r crimes_cleaned_by_mci, echo = F, include = F}
+
+crimes_by_neighbourhood %>%
+  head(n = 10) %>%
+  gt() %>%
+  tab_header(
+    title = 'Top 10 Neighbourhoods by Total MCI Offence Occurrences (2016)'
+  ) %>%
+  tab_style(
+    style = cell_borders(
+      sides = 'all',
+      color = "black",
+      weight = px(1.5),
+      style = "solid"
+    ),
+    locations = cells_body(
+      columns = everything(),
+      rows = everything()
+    )
+  ) %>%
+  opt_stylize(style = 6, color = "cyan")
+```
+
+
+```{r crime-by-neighbourhood, echo = F, fig.height=9, fig.width=18}
+crimes_by_neighbourhood %>%
+  arrange(desc(Total)) %>%
+  head(n = 10) %>%
+  gather('offence', 'count', -c(Hood_ID, Neighbourhood, Total)) %>%
+  ggplot(aes(x = reorder(Neighbourhood, Total), y = count, group = offence, fill = offence)) +
+  geom_bar(stat='identity') + 
+  coord_flip() + 
+  labs(
+    title = 'Top 10 Neighbourhoods by Number of Occurrence of Major Crimes\nin Toronto (2016)\n',
+    x = '\nNeighbourhood\n',
+    y = '\nCount\n',
+    fill = 'Offence'
+  ) +
+  theme(axis.text=element_text(size=14),
+        title = element_text(size=20),
+        legend.text = element_text(size=14)
+  )
+  
+
+```
+
+We also plotted an interactive heat map of number of MCI offences per neighbourhood. To access the interactive widget, extract <code>crime_map.html</code> and the directory <code>crime_map_files</code> and place them in the same directory. Then click and open <code>crime_map.html</code>.
+
+The crime map shows the distribution of MCI offences in the 140 offences, filtered by offence type and total count. From the heatmap, we could see that areas which were further away from city centers and urban areas had lower number of reported offences.
+
+
+```{r unused-crime-map, echo = F, eval = F}
+coordinates <- rgdal::readOGR('./data/Neighbourhoods - historical 140 - 4326.geojson')
+
+coordinates <- merge(
+    x = coordinates,
+    y = crimes_by_neighbourhood,
+    all.x = T,
+    all.y = F,
+    by.x = 'AREA_SHORT_CODE',
+    by.y = 'Hood_ID'
+  )
+
+pal <- colorNumeric("viridis", NULL)
+
+map_crime <- leaflet(coordinates) %>%
+  addTiles() %>%
+  addPolygons(
+    stroke = FALSE, 
+    smoothFactor = 0.3, 
+    fillOpacity = 1,
+    fillColor = ~pal(Total),
+    label = ~paste0(Neighbourhood, ": ", formatC(Total, big.mark = ",")),
+    group = 'Total'
+  ) %>%
+    addPolygons(
+    stroke = FALSE, 
+    smoothFactor = 0.3, 
+    fillOpacity = 1,
+    fillColor = ~pal(Assault),
+    label = ~paste0(Neighbourhood, ": ", formatC(Assault, big.mark = ",")),
+    group = 'Assault'
+  ) %>%
+    addPolygons(
+    stroke = FALSE, 
+    smoothFactor = 0.3, 
+    fillOpacity = 1,
+    fillColor = ~pal(`Auto Theft`),
+    label = ~paste0(Neighbourhood, ": ", formatC(`Auto Theft`, big.mark = ",")),
+    group = 'Auto Theft'
+  ) %>%
+  addPolygons(
+    stroke = FALSE, 
+    smoothFactor = 0.3, 
+    fillOpacity = 1,
+    fillColor = ~pal(`Break and Enter`),
+    label = ~paste0(Neighbourhood, ": ", formatC(`Break and Enter`, big.mark = ",")),
+    group = 'Break and Enter'
+  ) %>%
+    addPolygons(
+    stroke = FALSE, 
+    smoothFactor = 0.3, 
+    fillOpacity = 1,
+    fillColor = ~pal(Robbery),
+    label = ~paste0(Neighbourhood, ": ", formatC(Robbery, big.mark = ",")),
+    group = 'Robbery'
+  ) %>%
+    addPolygons(
+    stroke = FALSE, 
+    smoothFactor = 0.3, 
+    fillOpacity = 1,
+    fillColor = ~pal(`Theft Over`),
+    label = ~paste0(Neighbourhood, ": ", formatC(`Theft Over`, big.mark = ",")),
+    group = 'Theft Over'
+  ) %>%
+  addLegend(pal = pal, 
+            values = ~Total, 
+            opacity = 1.0
+  ) %>%
+  addLayersControl(
+    baseGroups = c('Total', 'Assault', 'Auto Theft', 'Break and Enter', 'Robbery', 'Theft Over'),
+    options = layersControlOptions(collapsed = FALSE)
+  )
+
+
+
+saveWidget(map_crime, file="./crime_map_2.html", selfcontained = F)
+```
+
+
+
+
+# Preliminary Results
+
+We inspected the relationship between the crime rate and the variables of interests, i.e. population size, population age, education, employment/labour, immigration and citizenship status, income taxes, and the level of visible minority. For each variable, we already extracted the sub-table which contained only the relevant fields from the original dataset in the "Data Cleaning" section. For each of these sub-tables, we merged them with the table containing (Neighbourhood, Population) tuples, and further merged them with the table containing the number of reported crime per offence type.
+
+
+## Relationship between Population Size and Crime Rate
+
+It is not surprising that the best fitted lines shows that the number of offences increases with the number of population in a neighbourhood. However, in all the subplots, the majority of the neighbourhoods had a population of less than 30 thousand, and there are outliers and influential points in the plots. A better indicator of crime rate versus population might be plotting the crime rate against the population density instead, which is more representative of the scale of crime rate in terms of neighbourhood size: a neighbourhood with higher population density is more likely to have higher crime rate.
+
+```{r crime-vs-population, echo = F, include = F}
+profiles_population_rel <- profiles_population %>%
+  t() %>%
+  as.data.frame() %>%
+  setNames(as.vector(.[4, ])) %>%
+  filter(!row_number() %in% c(1:5)) %>%
+  rownames_to_column(var = 'Neighbourhood') %>%
+  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) %>%
+  mutate_at(-c(1), as.numeric)
+
+crime_vs_population <- merge(
+  x = profiles_population_rel,
+  y = crimes_by_neighbourhood ,
+  all.x = T,
+  all.y = T,
+  by.x = 'Neighbourhood',
+  by.y = 'Neighbourhood'
+) %>%
+  mutate_at(c(2:9), remove_commas) %>%
+  pivot_longer(cols = c(4:9), values_to = 'Count', names_to = 'Offence') 
+```
+
+```{r crime-vs-population-2, echo = F, fig.width = 18, fig.height = 9, warning=F, message=F}
+crime_vs_population %>%
+  ggplot(aes(x = `Population, 2016`, y = Count, color=Offence)) +
+  geom_point() +
+  geom_smooth(method = 'lm', se=F, color='black') + 
+  facet_wrap(~Offence, scales = 'free') + 
+  labs(
+    title = 'Relationship between Neighbourhood Population and Number of MCI Offence Occurrence (Toronto 2016)',
+    x = '\nPopulation\n',
+    y = '\nCount\n'
+  ) +
+  theme(axis.text=element_text(size=14),
+        title = element_text(size=20),
+        legend.text = element_text(size=14),
+        strip.text.x = element_text(size = 18)
+  )
+
+
+```
+
+
+
+## Relationship between Population Age and Crime Rate
+
+We fitted a basic linear model where the response variable was the number of offences and the variables were the proportion of different age groups in the neighbourhood. Note that in the original dataset, there were two additional age groups (<code>Seniors (65+ years)</code> and <code>Older Seniors (85+ years)</code>). However, we did not include them in this preliminary model as it would induce multicollinearity, since these proportions of age groups add up to 1. 
+
+From the p-values below, we can see that the proportion of age groups are all statistically significant. Based on the signs of the estimated coefficients, they confirm from our previous findings that a neighbourhood with larger proportion of senior residents are likely to have fewer crime rate (negative coefficient), while increasing number of youths (positive coefficient) is more likely to the crime rate^[Ulmer, J. T., & Steffensmeier, D. (2014). The age and crime relationship: Social variation, social explanations. In The Nurture Versus Biosocial Debate in Criminology: On the Origins of Criminal Behavior and Criminality (pp. 377-396). SAGE Publications Inc.. https://doi.org/10.4135/9781483349114.n23].
+
+```{r crime-vs-age, echo = F, include = F}
+
+profiles_age_rel <- profiles_age %>%
+  t() %>%
+  as.data.frame() %>%
+  setNames(as.vector(.[4, ])) %>%
+  filter(!row_number() %in% c(1:5)) %>%
+  rownames_to_column(var = 'Neighbourhood') %>%
+  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) 
+
+
+  
+
+crime_vs_age <- merge(
+  x = profiles_age_rel,
+  y = crimes_by_neighbourhood ,
+  all.x = T,
+  all.y = T,
+  by.x = 'Neighbourhood',
+  by.y = 'Neighbourhood'
+) %>%
+  mutate_at(c(2:10), remove_commas)
+```
+
+
+
+```{r crime-vs-age-lm, fig.width = 18, fig.height=9, echo = F}
+crime_vs_age_lm_table <- crime_vs_age[, c(2:5, 14)]
+lm_age <- lm(data = crime_vs_age_lm_table, formula = Total ~ .)
+
+lm_age %>%
+  tidy() %>%
+  kable(
+    caption = 'Coefficient Estimates of a Linear Regression Model for Estimating MCI Offence Count (Age Groups)',
+    col.names = c('Terms', 'Estimate', 'Std. Error', 't-value', 'p-value'),
+    digits = 3
+  )
+
+# aov_age_summary_df <- data.frame(unclass(summary(aov_age)), check.names = F, stringsAsFactors = F) %>% 
+#   mutate_if(is.numeric, round, 3) %>% 
+#   rownames_to_column(var = 'Factors') %>%
+#   mutate(Factors = str_replace_all(Factors, '`', '')) 
+
+
+```
+
+
+## Relationship between Education and Crime Rate
+
+We also fitted a basic linear model where the response variable is the number of MCI offences and the predictors are the proprtion of people with different levels of education. From the summary, we can see that an increase proportion of people with secondary and postsecondary education increases the number of crime rates, but the increase is around 3 times as big for an increase in proportion of people with only secondary education than those with postsecondary education. Again, we did not include the group <code>No certificate, diploma or degree</code> in this preliminary model as it would induce multicollinearity.
+
+```{r crime-vs-education, echo=F}
+
+profiles_edu_rel <- profiles_education %>%
+  t() %>%
+  as.data.frame() %>%
+  setNames(as.vector(.[4, ])) %>%
+  filter(!row_number() %in% c(1:5)) %>%
+  rownames_to_column(var = 'Neighbourhood') %>%
+  mutate(across(Neighbourhood, str_replace_all, '\\.', ' '))
+
+crime_vs_education <- merge(
+  x = profiles_edu_rel,
+  y = crimes_by_neighbourhood ,
+  all.x = T,
+  all.y = T,
+  by.x = 'Neighbourhood',
+  by.y = 'Neighbourhood'
+) 
+
+crime_vs_education <- merge(
+  x = profiles_population_rel,
+  y = crime_vs_education ,
+  all.x = T,
+  all.y = T,
+  by.x = 'Neighbourhood',
+  by.y = 'Neighbourhood'
+) 
+
+crime_vs_education <- crime_vs_education %>%
+  mutate_at(c(2:5), as.numeric) %>%
+  mutate_at(c(3:5), ~ .x/`Population, 2016`)
+```
+
+
+```{r crime-vs-education-lm, echo=F}
+crime_vs_edu_lm_table <- crime_vs_education[, c(3,5, 12)]
+lm_edu <- lm(data = crime_vs_edu_lm_table, formula = Total ~ .)
+
+lm_edu %>%
+  tidy() %>%
+  kable(
+    caption = 'Coefficient Estimates of a Linear Regression Model for Estimating MCI Offence Count (Education)',
+    col.names = c('Terms', 'Estimate', 'Std. Error', 't-value', 'p-value'),
+    digits = 3
+  )
+```
+
+
+## Relationship between Employment and Crime Rate
+
+The fitted linear model below shows that the effect of the number of people who did not work in a neighbourhood on crime rate was statistically significant. This result aligned with the common consensus that unemployment rate was positively correlated with crime rate (Farrington et al. 1986^[Farrington, D. P., Gallagher, B., Morley, L., St. Ledger, R. J., & West, D. J. (1986). UNEMPLOYMENT, SCHOOL LEAVING, AND CRIME. The British Journal of Criminology, 26(4), 335–356. http://www.jstor.org/stable/23637076], John Howard Society of Ontario 2009^[https://johnhoward.on.ca/wp-content/uploads/2014/09/facts-24-crime-and-unemployment-whats-the-link-march-2009.pdf]).
+
+```{r crime-vs-employment, echo = F}
+profiles_employment_rel <- profiles_employment %>%
+  t() %>%
+  as.data.frame() %>%
+  setNames(as.vector(.[4, ])) %>%
+  filter(!row_number() %in% c(1:5)) %>%
+  rownames_to_column(var = 'Neighbourhood') %>%
+  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) %>%
+  mutate_at(-c(1), as.numeric)
+
+
+crime_vs_employment <- merge(
+  x = profiles_employment_rel,
+  y = crimes_by_neighbourhood ,
+  all.x = T,
+  all.y = T,
+  by.x = 'Neighbourhood',
+  by.y = 'Neighbourhood'
+) 
+
+crime_vs_employment <- merge(
+  x = profiles_population_rel,
+  y = crime_vs_employment ,
+  all.x = T,
+  all.y = T,
+  by.x = 'Neighbourhood',
+  by.y = 'Neighbourhood'
+) 
+```
+
+
+```{r crime-vs-employment-lm, echo = F}
+
+crime_vs_employment_lm_table <- crime_vs_employment[, c(3, 12)]
+lm_employment <- lm(data = crime_vs_employment_lm_table, formula = Total ~ .)
+
+lm_employment %>%
+  tidy() %>%
+  kable(
+    caption = 'Coefficient Estimates of a Linear Regression Model for Estimating MCI Offence Count (Employment Status)',
+    col.names = c('Terms', 'Estimate', 'Std. Error', 't-value', 'p-value'),
+    digits = 3
+  )
+
+
+```
+
+
+
+## Relationship between Immigration and Citizenship Status and Crime Rate
+
+We plotted the number of MCI offences against the proprtion of immigrants in the 140 neighbourhoods, separated by offence type and also included a total count. From these plots, we can see that as the proportion of immigrants increased in a neighbourhood, the number of crimes committed decreases, with the exception of "Break and Enter" which stayed roughly the same. This aligned with our prior findings which concluded that the number of immigrants (statistically-)significantly reduced the number of crimes in the area^[Statistics Canada. (n.d.). Main article. Neighbourhood Characteristics and the Distribution of Police-reported Crime in the City of Toronto. Retrieved March 13, 2023, from https://www150.statcan.gc.ca/n1/pub/85-561-m/2009018/part-partie1-eng.htm]. 
+
+```{r crime-vs-immgiration, echo = F}
+profiles_immigrant_rel <- profiles_immigrant %>%
+  t() %>%
+  as.data.frame() %>%
+  setNames(as.vector(.[4, ])) %>%
+  filter(!row_number() %in% c(1:5)) %>%
+  rownames_to_column(var = 'Neighbourhood') %>%
+  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) %>%
+  mutate_at(-c(1), as.numeric)
+
+crime_vs_immigrant <- merge(
+  x = profiles_immigrant_rel,
+  y = crimes_by_neighbourhood ,
+  all.x = T,
+  all.y = T,
+  by.x = 'Neighbourhood',
+  by.y = 'Neighbourhood'
+) 
+
+crime_vs_immigrant <- merge(
+  x = profiles_population_rel,
+  y = crime_vs_immigrant ,
+  all.x = T,
+  all.y = T,
+  by.x = 'Neighbourhood',
+  by.y = 'Neighbourhood'
+) 
+
+crime_vs_immigrant <- crime_vs_immigrant %>%
+  mutate_at(-c(1), as.numeric)
+
+
+crime_vs_immigrant <- crime_vs_immigrant %>%
+  mutate("Immigration_Rate" = .[[3]]/`Population, 2016`)
+```
+
+```{r crime-vs-immigration-lm, echo = F, message = F, warning=F, fig.width=18, fig.height=9}
+
+
+crime_vs_immigrant_lm_table <- crime_vs_immigrant[, c(12, 13)]
+lm_immigrant <- lm(data = crime_vs_immigrant_lm_table, formula = Total ~ .)
+
+lm_immigrant %>%
+  tidy() %>%
+  kable(
+    caption = 'Coefficient Estimates of a Linear Regression Model for Estimating MCI Offence Count (Employment Status)',
+    col.names = c('Terms', 'Estimate', 'Std. Error', 't-value', 'p-value'),
+    digits = 3
+  )
+
+crime_vs_immigrant %>%
+  pivot_longer(cols = c(7:12), values_to = 'Count', names_to = 'Offence') %>%
+  ggplot(aes(x = `Immigration_Rate`, y = Count, color=Offence)) +
+  geom_point() +
+  geom_smooth(method = 'lm', se=F, color='black') + 
+  facet_wrap(~Offence, scales = 'free') + 
+  labs(
+    title = 'Relationship between Neighbourhood Population and Number of MCI Offence Occurrence (Toronto 2016)',
+    x = '\nPopulation\n',
+    y = '\nCount\n'
+  ) +
+  theme(axis.text=element_text(size=14),
+        title = element_text(size=20),
+        legend.text = element_text(size=14),
+        strip.text.x = element_text(size = 18)
+  )
+```
+
+
+
+## Relationship between Visible Minority and Crime Rate
+
+A racially-diversed neighbourhood were found to be linked to lower crime rate, especially in rural areas^[Kim, Y.-A., &amp; Wo, J. C. (2022, April 1). Racially diverse neighborhoods in diverse areas are linked to lower crime rates. Racially diverse neighborhoods in diverse areas are linked to lower crime rates Comments. Retrieved March 13, 2023, from https://blogs.lse.ac.uk/usappblog/2022/04/01/racially-diverse-neighborhoods-in-diverse-areas-are-linked-to-lower-crime-rates/ ]. Hence, we chose to explore the relationship of neighbourhood crime rate and the proportion of visible minority because we believed that this feature was also related to immigration and citizenship status, which was found to be correlated with crime rate^[Statistics Canada. (n.d.). Main article. Neighbourhood Characteristics and the Distribution of Police-reported Crime in the City of Toronto. Retrieved March 13, 2023, from https://www150.statcan.gc.ca/n1/pub/85-561-m/2009018/part-partie1-eng.htm]. However, unlike the number of immigrants, we could see that crime rates were likely to be weakly positively correlated with the proportion of visible minority in the neighbourhood from the plots. The number of outliers in the plots might suggest why we obtained a different result than expected.
+
+```{r crime-vs-minority, echo = F}
+profiles_minority_rel <- profiles_minority %>%
+  t() %>%
+  as.data.frame() %>%
+  setNames(as.vector(.[4, ])) %>%
+  filter(!row_number() %in% c(1:5)) %>%
+  rownames_to_column(var = 'Neighbourhood') %>%
+  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) %>%
+  mutate_at(-c(1), as.numeric)
+
+crime_vs_minority <- merge(
+  x = profiles_minority_rel,
+  y = crimes_by_neighbourhood ,
+  all.x = T,
+  all.y = T,
+  by.x = 'Neighbourhood',
+  by.y = 'Neighbourhood'
+) 
+
+crime_vs_minority <- merge(
+  x = profiles_population_rel,
+  y = crime_vs_minority ,
+  all.x = T,
+  all.y = T,
+  by.x = 'Neighbourhood',
+  by.y = 'Neighbourhood'
+) 
+
+crime_vs_minority <- crime_vs_minority %>%
+  mutate_at(c(2:11), as.numeric) %>%
+  mutate('Minority_Ratio' = .[[3]]/`Population, 2016`)
+```
+
+```{r crime-vs-minority-plot, echo = F, fig.width = 18, fig.height = 9, warning=F, message=F}
+crime_vs_minority %>%
+  pivot_longer(cols = 6:11, names_to = 'Offence', values_to = 'Count') %>%
+  ggplot(aes(x = Minority_Ratio, y = Count, color=Offence)) +
+  geom_point() +
+  geom_smooth(method = 'lm', se=F, color='black') + 
+  facet_wrap(~Offence, scales = 'free') + 
+  labs(
+    title = 'Relationship between Neighbourhood Visible Minority Proportion\nand Number of MCI Offence Occurrence (Toronto 2016)',
+    x = '\nVisible Minority Proportion\n',
+    y = '\nCount\n'
+  ) +
+  theme(axis.text=element_text(size=14),
+        title = element_text(size=20),
+        legend.text = element_text(size=14),
+        strip.text.x = element_text(size = 18)
+  )
+```
+
+
+## Relationship between Income and Crime Rate
+
+To estimate the effect of average individual income on a neighbourhood's crime rate, we plotted the number of offences against average income tax per offence type. From the data cleaning process, the data for income groups were corrupted (see Data Cleaning section about "data indentation"). Thus, we decided to use the average income tax as an indicator of household income level for each neighbourhood. From the six subplots, we can see that the number of all offence types decrease as the average income tax of the neighbourhood increases, with the exception of "Break and Enter". This does not come as surprising as wealthy neighbourhoods were more likely to have better security, and relative risk associated with theft in wealthy neighbourhoods outweighted the possibility of stealing more expensive goods, which possibly deterred thefts in these areas^[Chamberlain, A. W., &amp; Boggess, L. N. (2016, September 26). Why disadvantaged neighborhoods are more attractive targets for burgling than wealthy ones. Why disadvantaged neighborhoods are more attractive targets for burgling than wealthy ones Comments. Retrieved March 13, 2023, from https://blogs.lse.ac.uk/usappblog/2016/09/26/why-disadvantaged-neighborhoods-are-more-attractive-targets-for-burgling-than-wealthy-ones/].
+
+```{r crime-vs-income, echo = F}
+profiles_income_rel <- profiles_income_tax %>%
+  t() %>%
+  as.data.frame() %>%
+  setNames(as.vector(.[4, ])) %>%
+  filter(!row_number() %in% c(1:5)) %>%
+  rownames_to_column(var = 'Neighbourhood') %>%
+  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) %>%
+  mutate_at(-c(1), as.numeric)
+
+
+crime_vs_income <- merge(
+  x = profiles_income_rel,
+  y = crimes_by_neighbourhood ,
+  all.x = T,
+  all.y = T,
+  by.x = 'Neighbourhood',
+  by.y = 'Neighbourhood'
+) 
+```
+
+```{r crime-vs-income-plot, echo = F, fig.width = 18, fig.height = 9, warning=F, message=F}
+crime_vs_income %>%
+  pivot_longer(cols = 4:9, names_to = 'Offence', values_to = 'Count') %>%
+  ggplot(aes(x = .[[2]], y = Count, color = Offence)) +
+  geom_point() +
+  geom_smooth(method = 'lm', se=F, color='black') + 
+  facet_wrap(~Offence, scales = 'free') + 
+  labs(
+    title = 'Relationship between Neighbourhood Average Income (by Average Income Tax)\nand Number of MCI Offence Occurrence (Toronto 2016)',
+    x = '\nIncome (Average Income Tax)\n',
+    y = '\nCount\n'
+  ) +
+  theme(axis.text=element_text(size=14),
+        title = element_text(size=20),
+        legend.text = element_text(size=14),
+        strip.text.x = element_text(size = 18)
+  )
+```
+
+
+
+
+# Conclusions
+
+
+In this report, we discussed how we performed exploratory data analysis on how the demographics of a neighbourhood affected the crime rate of the area in the 140 historical neighbourhoods in Toronto in 2016. Based on prior research and some preliminary testing, we identified several sigificant demographic factors which affected the number of offences committed, including age, income, number of immigrants, level of education, employment status and number of visible minorities in the neighbourhood. 
+
+
+
+# Limitations
+
+There were several limitations in our research study.
+
+First, in our preliminary testing plots and basic models, there were many outliers and influential points in our predictor variables and responses, which might have affected our interpretation of the results. For example, in the plots of number of MCI offences against average income tax, all the subplots showed a "fanning pattern", which meant that the variance of the response were not Normally distributed and this violation of linear model might affect the final result. 
+
+Second, the small amount of corrupted/mis-placed observations in the "Neighbourhood Profiles" dataset prevented us from using the income groups directly to estimate the effect of average household and individual income on neighbourhood crime rate. Instead, we utilised the average income tax to represent the wealthiness of neighbourhoods. Although income tax is positively correlated with individual and household income, the data come in aggregated form (one number, "average tax income", for each neighbourhood), compared to the exact numbers of individuals/household in each household. This reduced the amount of information we could use and this could affect the final result in our preliminary testing.
+
+
+
+# Next Steps
+
+Despite the limitations above, most of our findings agreed with previous researches, in that the variables of interest were significantly correlated with neighbourhood crime rate. We could improved our existing preliminary models by using a combination of different features as predictors for predicting crime rate, in order to better explore the interactions of these features and how they affected crime rate together. 
+
+Another future step for this research could be to use the datasets to build a predictive model on the number of MCI offences in the neighbourhood, based on variables and features which are also correlated with number of reported offence, such as the number of public spaces and businesses, in addition to the demographic information we collected. This, however, requires furthuer data collection.
+
+
+
+# References
+
+1. Foster, S., Giles-Corti, B., & Knuiman, M. (2010). Neighbourhood design and fear of crime: A social-ecological examination of the correlates of residents’ fear in new suburban housing developments. In Health & Place (Vol. 16, Issue 6, pp. 1156–1165). Elsevier BV. https://doi.org/10.1016/j.healthplace.2010.07.007↩︎
+
+2. Statistics Canada. (2021). Neighbourhood characteristics and life satisfaction of individuals in lower-, middle-, and higher-income families in Canadian metropolitan areas. Government of Canada. https://doi.org/10.25318/36280001202100500006-ENG↩︎
+
+3. Government of Canada, S. C. (2020, July 17). Census of population. Surveys and statistical programs. Retrieved March 13, 2023, from https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=3901↩︎
+
+4. Statistics Canada. (n.d.). Main article. Neighbourhood Characteristics and the Distribution of Police-reported Crime in the City of Toronto. Retrieved March 13, 2023, from https://www150.statcan.gc.ca/n1/pub/85-561-m/2009018/part-partie1-eng.htm↩︎
+
+5. Sun, Ivan Y.; Triplett, Ruth A.; and Gainey, Randy R., “Neighborhood Characteristics and Crime: A Test of Sampson and Groves’ Model of Social Disorganization” (2004). Sociology & Criminal Justice Faculty Publications. 3. https://digitalcommons.odu.edu/sociology_criminaljustice_fac_pubs/3↩︎
+
+6. Ulmer, J. T., & Steffensmeier, D. (2014). The age and crime relationship: Social variation, social explanations. In The Nurture Versus Biosocial Debate in Criminology: On the Origins of Criminal Behavior and Criminality (pp. 377-396). SAGE Publications Inc.. https://doi.org/10.4135/9781483349114.n23↩︎
+
+7. Farrington, D. P., Gallagher, B., Morley, L., St. Ledger, R. J., & West, D. J. (1986). UNEMPLOYMENT, SCHOOL LEAVING, AND CRIME. The British Journal of Criminology, 26(4), 335–356. http://www.jstor.org/stable/23637076↩︎
+
+8. Kim, Y.-A., & Wo, J. C. (2022, April 1). Racially diverse neighborhoods in diverse areas are linked to lower crime rates. Racially diverse neighborhoods in diverse areas are linked to lower crime rates Comments. Retrieved March 13, 2023, from https://blogs.lse.ac.uk/usappblog/2022/04/01/racially-diverse-neighborhoods-in-diverse-areas-are-linked-to-lower-crime-rates/ ↩︎
+
+9. Chamberlain, A. W., & Boggess, L. N. (2016, September 26). Why disadvantaged neighborhoods are more attractive targets for burgling than wealthy ones. Why disadvantaged neighborhoods are more attractive targets for burgling than wealthy ones Comments. Retrieved March 13, 2023, from https://blogs.lse.ac.uk/usappblog/2016/09/26/why-disadvantaged-neighborhoods-are-more-attractive-targets-for-burgling-than-wealthy-ones/↩︎
+
+
+# Appendix
+
+
+## Table 1. Sample of Dataset - Major Crime Indicators 
+
+
+```{r data-intro-crimes, echo = F}
+crimes %>%
+  head(n = 4) %>%
+  gt() %>%
+  tab_header(
+    title = 'Major Crime Indicators',
+    subtitle = 'Occurrence of Crime from January 2014 to June 2022'
+  ) %>%
+  tab_style(
+    style = cell_borders(
+      sides = 'all',
+      color = "black",
+      weight = px(1.5),
+      style = "solid"
+    ),
+    locations = cells_body(
+      columns = everything(),
+      rows = everything()
+    )
+  ) %>%
+  opt_stylize(style = 6, color = "cyan")
+```
+
+## Table 2. Sample of Dataset - Neighbourhood Profiles (Census)
+
+
+```{r data-intro-profiles, echo = F}
+profiles %>%
+  head(n = 4) %>%
+  gt() %>%
+  tab_header(
+    title = 'Neighbourhood Profiles',
+    subtitle = 'Census of Neighbourhoods in 2016'
+  ) %>%
+  tab_style(
+    style = cell_borders(
+      sides = 'all',
+      color = "black",
+      weight = px(1.5),
+      style = "solid"
+    ),
+    locations = cells_body(
+      columns = everything(),
+      rows = everything()
+    )
+  ) %>%
+  opt_stylize(style = 6, color = "cyan")
+```
+
+
+## Table 3. Sample of Cleaned Dataset - Major Crime Indicators
+
+
+```{r crimes-cleaned, echo = F, fig.width=15}
+crimes_cleaned %>%
+  head(n = 4) %>%
+  gt() %>%
+  tab_header(
+    title = 'Major Crime Indicators (2016)',
+    subtitle = 'Occurrence of Crime in 2016'
+  ) %>%
+  tab_style(
+    style = cell_borders(
+      sides = 'all',
+      color = "black",
+      weight = px(1.5),
+      style = "solid"
+    ),
+    locations = cells_body(
+      columns = everything(),
+      rows = everything()
+    )
+  ) %>%
+  opt_stylize(style = 6, color = "cyan")
+```
+
+
+
+
+
+

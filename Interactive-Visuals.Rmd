@@ -1,0 +1,99 @@
+---
+title: "Interactive Visuals"
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+  pdf_document: default
+always_allow_html: true
+---
+
+```{r set-up, include=FALSE, message = F, warning = F}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::knit_child("Midterm-Report.Rmd")
+```
+
+
+# Major Crime Indicator Offences by Toronto Neighbourhoods
+
+Below is an interactive heat map of number of MCI offences by neighbourhood.
+
+The crime map shows the distribution of MCI offences in the 140 offences, filtered by offence type and total count. From the heatmap, we could see that areas which were further away from city centers and urban areas had lower number of reported offences.
+
+
+```{r crime-map, echo = F, message = F, warning = F}
+coordinates <- rgdal::readOGR('./data/Neighbourhoods - historical 140 - 4326.geojson', verbose = FALSE)
+
+coordinates <- merge(
+    x = coordinates,
+    y = crimes_by_neighbourhood,
+    all.x = T,
+    all.y = F,
+    by.x = 'AREA_SHORT_CODE',
+    by.y = 'Hood_ID'
+  )
+
+pal <- colorNumeric("viridis", NULL)
+
+map_crime <- leaflet(coordinates) %>%
+  addTiles() %>%
+  addPolygons(
+    stroke = FALSE, 
+    smoothFactor = 0.3, 
+    fillOpacity = 1,
+    fillColor = ~pal(Total),
+    label = ~paste0(Neighbourhood, ": ", formatC(Total, big.mark = ",")),
+    group = 'Total'
+  ) %>%
+    addPolygons(
+    stroke = FALSE, 
+    smoothFactor = 0.3, 
+    fillOpacity = 1,
+    fillColor = ~pal(Assault),
+    label = ~paste0(Neighbourhood, ": ", formatC(Assault, big.mark = ",")),
+    group = 'Assault'
+  ) %>%
+    addPolygons(
+    stroke = FALSE, 
+    smoothFactor = 0.3, 
+    fillOpacity = 1,
+    fillColor = ~pal(`Auto Theft`),
+    label = ~paste0(Neighbourhood, ": ", formatC(`Auto Theft`, big.mark = ",")),
+    group = 'Auto Theft'
+  ) %>%
+  addPolygons(
+    stroke = FALSE, 
+    smoothFactor = 0.3, 
+    fillOpacity = 1,
+    fillColor = ~pal(`Break and Enter`),
+    label = ~paste0(Neighbourhood, ": ", formatC(`Break and Enter`, big.mark = ",")),
+    group = 'Break and Enter'
+  ) %>%
+    addPolygons(
+    stroke = FALSE, 
+    smoothFactor = 0.3, 
+    fillOpacity = 1,
+    fillColor = ~pal(Robbery),
+    label = ~paste0(Neighbourhood, ": ", formatC(Robbery, big.mark = ",")),
+    group = 'Robbery'
+  ) %>%
+    addPolygons(
+    stroke = FALSE, 
+    smoothFactor = 0.3, 
+    fillOpacity = 1,
+    fillColor = ~pal(`Theft Over`),
+    label = ~paste0(Neighbourhood, ": ", formatC(`Theft Over`, big.mark = ",")),
+    group = 'Theft Over'
+  ) %>%
+  addLegend(pal = pal, 
+            values = ~Total, 
+            opacity = 1.0
+  ) %>%
+  addLayersControl(
+    baseGroups = c('Total', 'Assault', 'Auto Theft', 'Break and Enter', 'Robbery', 'Theft Over'),
+    options = layersControlOptions(collapsed = FALSE)
+  )
+
+
+map_crime
+```
