@@ -9,3 +9,5 @@ navbar:
       href: Midterm.html
     - text: "Interactive Visualizations"
       href: Interactive-Visuals.html
+    - text: 'Final Report'
+      href: Final-Report.html

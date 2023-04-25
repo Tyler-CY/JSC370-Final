@@ -1,0 +1,41 @@
+---
+title: "Toronto Neighbourhood Crime"
+subtitle: "Examining the relationship between Neighbourhood Crime Rate and Demographic Data in Toronto's 140 historical neighbourhoods in 2016"
+author: "C.Y. Yan"
+date: "24 April 2022"
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+always_allow_html: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# install.packages('opendatatoronto')
+# install.packages("gt")
+# install.packages("cowplot")
+# install.packages('rgdal')
+#install.packages('papeR')
+#install.packages("flextable")
+
+# library(flextable)
+# library(opendatatoronto)
+# library(gt)
+# library(broom)
+# library(knitr)
+# library(ggplot2)
+# library(cowplot)
+# library(tidyverse)
+# library(leaflet)
+# library(knitr)
+# library(car)
+# library(papeR)
+# library(rgdal)
+# library(htmlwidgets)
+```
+
+
+Final Report
