@@ -18,6 +18,14 @@ knitr::opts_chunk$set(echo = TRUE)
 # install.packages('rgdal')
 #install.packages('papeR')
 #install.packages("flextable")
+# update.packages(ask = FALSE)
+# pak::pkg_install("r-lib/rlang")
+# install.packages('pak')
+# library(pak)
+
+# Update rlang if error
+# remove.packages('rlang')
+# install.packages("rlang")
 
 library(flextable)
 library(opendatatoronto)
@@ -161,7 +169,7 @@ Observations not from 2016 were also removed from the "Major Crime Indicators" d
 ```{r crimes-remove-obs, include = F}
 crimes_cleaned <- 
   crimes_cleaned %>%
-  filter(occurrenceyear == 2016 & Neighbourhood != 'NSA')
+  dplyr::filter(occurrenceyear == 2016 & Neighbourhood != 'NSA')
 
 summary(crimes_cleaned)
 ```

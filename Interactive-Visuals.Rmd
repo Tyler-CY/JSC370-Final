@@ -10,9 +10,9 @@ always_allow_html: true
 
 ```{r set-up, include=FALSE, message = F, warning = F}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::knit_child("Midterm-Report.Rmd")
+knitr::knit_child("Midterm.Rmd")
 
-install.packages('plotly')
+# install.packages('plotly')
 library(plotly)
 ```
 
