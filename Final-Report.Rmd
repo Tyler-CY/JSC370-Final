@@ -341,7 +341,10 @@ airbnb_cleaned <- airbnb
 airbnb_cleaned$neighbourhood_cleansed[airbnb_cleaned$neighbourhood_cleansed == "Mimico (includes Humber Bay Shores)"] <- "Mimico"
 airbnb_cleaned$neighbourhood_cleansed[airbnb_cleaned$neighbourhood_cleansed == "L'Amoreaux"] <- "LAmoreaux"
 airbnb_cleaned$neighbourhood_cleansed[airbnb_cleaned$neighbourhood_cleansed == "Tam O'Shanter-Sullivan"] <- "Tam OShanter-Sullivan"
-airbnb_cleaned$neighbourhood_cleansed[airbnb_cleaned$neighbourhood_cleansed == "O'Connor-Parkview"] <- "OConnor-Parkview" 
+airbnb_cleaned$neighbourhood_cleansed[airbnb_cleaned$neighbourhood_cleansed == "O'Connor-Parkview"] <- "OConnor-Parkview"
+
+airbnb_cleaned <- airbnb_cleaned %>%
+  mutate(neighbourhood_cleansed = str_replace_all(neighbourhood_cleansed, '[-/\\.]', ' ')) 
 ```
 
 ### 2.2.4 Cleaning of "Toronto Neighbourhood Information"
@@ -359,7 +362,10 @@ venues_cleaned$Neighborhood[venues_cleaned$Neighborhood == "Cabbagetown-South St
 venues_cleaned$Neighborhood[venues_cleaned$Neighborhood == "Weston-Pelham Park"] <- "Weston-Pellam Park"
 
 venues_cleaned <- venues_cleaned %>%
-  select(Neighborhood, number_gyms, number_venues)
+  select(Neighborhood, number_gyms, number_venues) %>%
+  mutate(Neighborhood = str_replace_all(Neighborhood, '[-/\\.]', ' ')) 
+
+colnames(venues_cleaned) <- c('Neighbourhood', 'number_gyms', 'number_venues')
 ```
 
 ## 2.3 Data Exploration
@@ -520,8 +526,12 @@ Note that Waterfront Communities-The Island with 2754 listings and 1241 offences
 ```{r airbnb_count, echo = F, message = F, warning=F, fig.height=9, fig.width=18}
 airbnb_count <- airbnb_cleaned %>%
   group_by(neighbourhood_cleansed) %>%
-  dplyr::summarise(count = n())
+  dplyr::summarise(count = n()) 
 
+colnames(airbnb_count) <- c('Neighbourhood', 'Airbnb')
+
+
+  
 crimes_cleaned_count <- crimes_cleaned %>%
   group_by(Neighbourhood) %>%
   dplyr::summarise(count = n())
@@ -531,7 +541,7 @@ airbnb_vs_crimes <- merge(
   y = crimes_cleaned_count,
   all.x = T,
   all.y = T,
-  by.x = 'neighbourhood_cleansed',
+  by.x = 'Neighbourhood',
   by.y = 'Neighbourhood'
 )
 colnames(airbnb_vs_crimes) <- c('Neighbourhood', 'Airbnb', 'Crime')
@@ -566,7 +576,7 @@ venues_vs_crimes <- merge(
   y = crimes_cleaned_count,
   all.x = T,
   all.y = T,
-  by.x = 'Neighborhood',
+  by.x = 'Neighbourhood',
   by.y = 'Neighbourhood'
 )
 colnames(venues_vs_crimes) <- c('Neighbourhood', 'Gyms', 'Venues', 'Crime')
@@ -982,6 +992,27 @@ crime_vs_income %>%
 
 
 ## 2.4 Modelling
+
+
+```{r everything, echo = F, include = F}
+VOI <- c('airbnb_count', 'venues_cleaned',  # new data
+                'profiles_age_rel', 'profiles_edu_rel', 'profiles_employment_rel', 'profiles_immigrant_rel',
+                'profiles_income_rel', 'profiles_minority_rel', 'profiles_population_rel')
+
+everything <- crimes_by_neighbourhood
+for (d in VOI){
+  everything <- merge(
+    x = everything,
+    y = get(d),
+    all.x = T,
+    all.y = T,
+    by.x = 'Neighbourhood',
+    by.y = 'Neighbourhood'
+  )
+  
+}
+
+```
 
 # 3. Results
 
