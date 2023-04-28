@@ -24,4 +24,4 @@ There are several interactive visualizations which help you familiarize with the
 
 Based on the "Next Steps" in the Midterm Report, new datasets are included into my analysis on what factors affect crime rates in Toronto neighbourhoods, as well as machine learning models which predict how crime rates change as different parameters of neighbourhoods are modified and adjusted. 
 
-[PDF Download]()
+[PDF Download](https://github.com/Tyler-CY/JSC370-Final/blob/master/Toronto%20Neighbourhood%20Crime%20HTML%20PDF%20version.pdf)

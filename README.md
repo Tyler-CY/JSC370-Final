@@ -6,4 +6,6 @@ This research study aims to explore the relationship between crime rate and the 
 
 ## Interactive Website
 
-https://tyler-cy.github.io/JSC370-Final/
+Read the full research report and interactive visualizations on https://tyler-cy.github.io/JSC370-Final/. You can also download the PDF version of the final report on the home page. 
+
+Note: Currently PDF knitting is experiencing issues with the R libraries used. The current PDF version is a "screen capture" of the final report's HTML page. It is recommended to read the final report on the website directly if possible. Further updates to the PDF will be available as soon as possible.
