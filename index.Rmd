@@ -1,6 +1,5 @@
 ---
-title: "JSC370 Final Project - Toronto Neighbourhood Crime"
-author: "Tyler-CY"
+title: "Examining the relationship between Neighbourhood Crime Rate and Demographic Data in Toronto’s 140 historical neighbourhoods in 2016"
 output: 
     html_document:
         toc: TRUE
@@ -8,18 +7,21 @@ output:
 always_allow_html: true
 ---
 
-Welcome to my JSC370 Final Project website. Here, you can read about my research about crimes in Toronto neighbourhoods.
+# Project Description
 
-The website is divided into different pages
+This research study aims to explore the relationship between crime rate and the characteristics of neighbourhoods in Toronto in 2016. Past studies showed that neighbourhood characteristics were significant factors of the crime rate of an area (Foster et.al 20101). These characteristics include: social-economic factors such as number of businesses, number of community spaces such as parks, green spaces and community centers, ease of transit access, and human factors such as community belonging and quality of local communities (Statistics Canada 20212). In this study, we aim to explore the relationship between the demographics, neighbourhood amenities and crime rate of neighbourhoods. Understanding this relationship will help the government and local communities respond more effectively against emerging crime rates, by eliminating risk factors and improving the well-being of a neighbourhood.
 
-## Midterm Report
+
+# Midterm Report
 
 You can read about my midterm report where the datasets were analysed, and preliminary tests are done to investigate the relationships of crime rate in Toronto neighbourhoods and their demographic characteristics.
 
-## Interactive Visualizations
+# Interactive Visualizations
 
 There are several interactive visualizations which help you familiarize with the trends and distributions of Toronto's crime rates. 
 
-## Final Report
+# Final Report
 
-Based on the "Next Steps" in the Midterm Report, new datasets are included into my analysis on what factors affect crime rates in Toronto neighbourhoods, as well as a model which predicts how crime rates change as different parameters of neighbourhoods are modified and adjusted. 
+Based on the "Next Steps" in the Midterm Report, new datasets are included into my analysis on what factors affect crime rates in Toronto neighbourhoods, as well as machine learning models which predict how crime rates change as different parameters of neighbourhoods are modified and adjusted. 
+
+[PDF Download]()

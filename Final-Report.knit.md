@@ -13,47 +13,7 @@ always_allow_html: yes
 ---
 
 
-```{r imports, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
 
-# install.packages('opendatatoronto')
-# install.packages("gt")
-# install.packages("cowplot")
-# install.packages('rgdal')
-#install.packages('papeR')
-#install.packages("flextable")
-# update.packages(ask = FALSE)
-# pak::pkg_install("r-lib/rlang")
-# install.packages('pak')
-# library(pak)
-
-# Update rlang if error
-# remove.packages('rlang')
-# install.packages("rlang")
-
-library(flextable)
-library(opendatatoronto)
-library(gt)
-library(broom)
-library(knitr)
-library(ggplot2)
-library(cowplot)
-library(tidyverse)
-library(leaflet)
-library(knitr)
-library(car)
-library(papeR)
-library(rgdal)
-library(htmlwidgets)
-library(MASS)
-library(kableExtra)
-# ML
-# install.packages(c('rpart', 'rpart.plot', 'randomForest', 'gbm'))
-library(rpart)
-library(rpart.plot)
-library(randomForest)
-library(gbm)
-```
 
 
 # 1. Introduction
@@ -81,13 +41,7 @@ This report outlines the process of data collection, exploratory data analysis a
 To answer our research question, data were collected from The City of Toronto's Open Data Portal (the Portal), the official source for Toronto open data from city divisions and agencies^[https://open.toronto.ca/]. The datasets of interest were "Major Crime Indicators" and "Neighbourhood Profiles". Both datasets were readily available for download on Open Toronto as a CSV, JSON or XML format, or by using the Open Data Portal API. We retrieved the data by downloading the CSV file^[We originally retrieved the data through the portal's API, by installing the R package <code>opendatatoronto</code> and following the instructions in the "For Developers" section 
 (See [Neighbourhood Profiles](https://open.toronto.ca/dataset/neighbourhood-profiles/) and [Major Crime Indicators](https://open.toronto.ca/dataset/major-crime-indicators/). However, the Portal updated their API and the format of the data (i.e. the column names), which rendered our old code unusable.]. The "Neighbourhoods" dataset was also retrieved as a geojson file from the Portal for creating a map visualization of crime rate: it contained the coordinates of the boundaries of the 140 historical neighbourhoods in Toronto. Lastly, two datasets were used from Kaggle, [Airbnb Toronto Data](https://www.kaggle.com/datasets/suchow32/airbnb-toronto-data) and [Toronto Neighborhoods Information](https://www.kaggle.com/datasets/youssef19/toronto-neighborhoods-inforamtion). As their names suggest, the former provide listings of Airbnb rentals in Toronto and the latter used the Foursquare API (among others) to provide additional information about Toronto neighbourhoods.
 
-```{r data-loading, echo = F, include = F}
-crimes <- read.csv('data/major-crime-indicators.csv')
-profiles <- read.csv('./data/neighbourhood-profiles-2016-140-model.csv')
-airbnb <- read.csv('./data/listing_toronto.csv')
-venues <- read.csv('./data/Toronto_neighborhood_demographics_geographics_venues.csv')
 
-```
 
 ### 2.1.1 Dataset - Major Crime Indicators
 
@@ -132,252 +86,67 @@ For all the datasets, we first inspected the datasets using R functions such as 
 
 ### 2.2.1 Cleaning of "Major Crime Indicators"
 
-```{r mci-data-summary, eval = F, include = F}
-# Major Crime Indicators
-summary(crimes)
-str(crimes)
-sum(is.na(crimes))
 
-(unique(crimes$offence))
-
-# Neighbourhood Profiles
-summary(profiles)
-str(profiles)
-sum(is.na(profiles))
-```
 
 Unwanted variables were first removed. They included: <code>X_id</code> (unique identifier), <code>event_unique_id</code> (event identifier), <code>Division</code> (Police Division where offence occurred), <code>ucr_code</code> (UCR code for offence), <code>ucr_ext (UCR extension for offence)</code>, and <code>Hood_ID</code> (identifier of neighbourhood). 
 
-```{r crimes-remove-var, include = F}
-crimes_cleaned <- crimes
-crimes_cleaned <- crimes_cleaned[ , -which(names(crimes_cleaned) %in% c('X_id', 'event_unique_id', 'Division', 'ucr_code', 'ucr_ext'))]
-```
+
 
 The remaining wanted variables contained information about the occurrence time and date (in variables <code>occurrencedate</code>, <code>occurrenceyear</code>, <code>occurrencemonth</code>, <code>occurrenceday</code>, <code>occurrencedayofyear</code>, <code>occurrencedayofweek</code>, <code>occurrencehour</code>), the reported time and date (in variables <code>reporteddate</code>, <code>reportedyear</code>, <code>reportedmonth</code>, <code>reportedday</code>, <code>reporteddayofyear</code>, <code>reporteddayofweek</code>, <code>reportedhour</code>), the location (in variables <code>location_type</code>, <code>premises_type</code>, <code>Neighbourhood</code>), and the crime offence (in variables <code>Offence</code> and <code>MCI</code>).
 
 Observations not from 2016 were also removed, since we were only interested in reported offences which occurred in 2016. We also removed observations where the neighbourhood was missing, which was represented by "NSA" ("Not Specified Area") in the data.
 
-```{r crimes-remove-obs, include = F}
-crimes_cleaned <- 
-  crimes_cleaned %>%
-  dplyr::filter(occurrenceyear == 2016 & Neighbourhood != 'NSA')
 
-summary(crimes_cleaned)
-```
 
 ### 2.2.2 Cleaning of "Neighbourhood Profiles"
 
 The "Neighbourhood Profiles" dataset contains characteristics (features) which have sub-characteristics (sub-features). However, these sub-characteristics are all listed under the same column (same variable) as the parent characteristic, except being indented by varying degrees based on the sub-characteristic relationships (i.e. a sub-sub-characteristic is indented more than a sub-characteristics, and so on). Moreover, some of the rows in the data are in complete wrong order, which made data cleaning inefficient and prone to error. For example, two sub-characteristics with very similar description are placed in the same indentation under the two characteristics of similar type (in the wrong order), which makes it impossible to distinguish which sub-characteristics belongs to which parent. To tackle this problem, we first identified the main characteristics wanted before cleaning the sub-characteristics.
 
 
-```{r echo = F, warning=F,message=F}
-crimes_by_neighbourhood <- crimes_cleaned %>%
-  group_by(Neighbourhood, mci_category, Hood_ID) %>%
-  dplyr::summarise(count = n()) %>%
-  pivot_wider(names_from = mci_category, values_from = count) %>%
-  replace(is.na(.), 0) %>%
-  mutate(Total = rowSums(across(-Hood_ID), na.rm = T)) %>%
-  mutate(Neighbourhood = str_replace_all(Neighbourhood, '[-/\\.]', ' ')) 
 
-```
 
 We first removed the "Data Source" column (which defines the data source, unrelated to our research) and divided the dataset into 50 tibbles, each representing a different topic with varying number of (sub-)characteristics. Then, we cleaned only the features (characteristics) wanted: age, level of education, employment status, immigration and citizenship status, average income tax, number of visible minorities, and population count. These features were kept in separate tables for the purpose of preliminary testing individually. Note that some of these subtables still suffered from faulty arrangements and we could only use a subset of these sub-tables in our study.
 
 
-```{r profiles-divide, echo = F, include = F}
-profiles_cleaned <- profiles
-profiles_cleaned <- profiles_cleaned[-c(4)]
-colnames(profiles_cleaned)[-c(1:5)] <- crimes_by_neighbourhood$Neighbourhood
-
-remove_commas <- function(x) {
-  as.numeric(
-    gsub(',', 
-         '', 
-         gsub('%', '', x)
-         
-    )
-  )
-}
-
-profiles_cleaned <- profiles_cleaned %>%
-  mutate_at(c(5:145), remove_commas)
-
-profiles_cleaned
-```
-
-```{r profiles-explore-topics, echo = F, include = F, eval = F}
-topics <- profiles_cleaned %>% group_by(Topic)
-profiles_by_topic <- group_split(topics)
-keys <- group_keys(topics)
-keys <- keys %>% map_chr(~ str_c(., collapse = ","))
-keys <- strsplit(keys, split=",")
-keys <- keys$Topic
-```
 
 
-```{r profiles-age, echo = F, include = F}
-profiles_age <- profiles_cleaned %>% filter(Topic == 'Age characteristics')
-profiles_age <- profiles_age[!grepl('Male|Female', profiles_age$Characteristic) , ]
-profiles_age
-```
-
-```{r profiles-employment, echo = F, include = F}
-employement_status <- c('Did not work', 'Worked full year, full time', 'Worked part year and/or part time')
-
-profiles_employment <- profiles_cleaned %>% filter(Topic == 'Work activity during the reference year') %>%
-  filter(str_detect(Characteristic, paste(employement_status, collapse='|')))
-
-profiles_employment
-```
-
-```{r profiles-citizenship, echo = F, include = F}
-citizenship_status <- c('Canadian citizens$')
-
-profiles_citizenship <- profiles_cleaned %>% filter(Topic == 'Citizenship') %>%
-  filter(str_detect(Characteristic, paste(citizenship_status, collapse='|')))
-
-profiles_citizenship
-
-```
-
-```{r profiles-education, echo = F, include = F}
-education_status <- c('No certificate, diploma or degree', 'school diploma', 'Postsecondary certificate, diploma or degree')
-
-profiles_education <- profiles_cleaned %>% filter(Topic == 'Highest certificate, diploma or degree') %>%
-  filter(str_detect(Characteristic, paste(education_status, collapse='|'))) %>%
-  arrange(X_id) %>%
-  head(n = 3)
-
-profiles_education
-
-```
 
 
-```{r profiles-population, echo = F, include = F}
-profiles_population <- profiles_cleaned %>% filter(Topic == 'Population and dwellings') %>%
-  filter(Characteristic == 'Population, 2016')
-
-profiles_population
-
-```
-
-```{r profiles-minority, echo = F, include = F}
-minority <- c('Total visible minority population', 'Not a visible minority')
-
-profiles_minority <- profiles_cleaned %>% filter(Topic == 'Visible minority population') %>%
-  filter(str_detect(Characteristic, paste(minority, collapse='|')))
-
-profiles_minority
-
-```
-
-```{r profiles-immigrant, echo = F, include = F}
-immigration_status <- c('Non-immigrants', 'Immigrants', 'Non-permanent residents')
-
-profiles_immigrant <- profiles_cleaned %>% filter(Topic == 'Immigrant status and period of immigration') %>%
-  filter(str_detect(Characteristic, paste(immigration_status, collapse='|')))
-
-profiles_immigrant
 
 
-```
-
-```{r profiles-income-tax, echo = F, include = F}
-income_tax_status <- c('Income taxes: Average amount')
-
-profiles_income_tax <- profiles_cleaned %>% filter(Topic == 'Income taxes')  %>%
-  filter(str_detect(Characteristic, paste(income_tax_status, collapse='|')))
 
 
-profiles_income_tax
 
 
-```
-
-```{r profiles-wanted-features, echo = F, include = F}
-
-profiles_wanted_features <- rbind(profiles_age, profiles_education)
-# profiles_wanted_features <- rbind(profiles_wanted_features, profiles_citizenship)
-profiles_wanted_features <- rbind(profiles_wanted_features, profiles_employment)
-profiles_wanted_features <- rbind(profiles_wanted_features, profiles_immigrant)
-profiles_wanted_features <- rbind(profiles_wanted_features, profiles_income_tax)
-profiles_wanted_features <- rbind(profiles_wanted_features, profiles_minority)
-profiles_wanted_features <- rbind(profiles_wanted_features, profiles_population)
 
 
-profiles_wanted_features_by_neighbourhood <- profiles_wanted_features %>%
-  pivot_longer(cols = names(profiles_wanted_features)[5:145], values_to = 'Values', names_to = 'Neighbourhood') %>%
-  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) # Remove the '.' from the string
 
 
-profiles2 <- profiles_wanted_features_by_neighbourhood
-```
 
 
-```{r merge-data, echo = F, include = F}
-
-profiles_wanted_features  %>%
-  dplyr::select(c(Category, Characteristic, `City.of.Toronto`, Annex)) %>%
-  rename("Toronto" = "City.of.Toronto") %>%
-  gt() %>%
-  tab_header(
-    title = 'Variables of Interests from Neighbourhood Profiles (Subset) (2016)',
-    subtitle = 'This table only shows the variables for the City of Toronto and one of its neighbourhood, Annex, as a subset example.'
-  ) %>%
-  tab_style(
-    style = cell_borders(
-      sides = 'all',
-      color = "black",
-      weight = px(1.5),
-      style = "solid"
-    ),
-    locations = cells_body(
-      columns = everything(),
-      rows = everything()
-    )
-  ) %>%
-  opt_stylize(style = 6, color = "cyan") %>%
-  tab_options(table.width = pct(100))
 
 
-```
+
+
+
+
+
+
+
+
 
 
 ### 2.2.3 Cleaning of "Airbnb Toronto Data"
 
 The dataset was already cleaned by the maker. However, although the variable is named <code>neighbourhood_cleansed</code>, some neighbourhood names were not standardized. Thus, we manually cleaned the neighbourhood names so that they match with the <Neighbourhood> column in the datasets from the Toronto Data Portal. For example, <code>Mimico (includes Humber Bay Shores)</code> was changed to <code>Mimico</code>.
 
-```{r airbnb-cleaned, echo = F, include = F}
-airbnb_cleaned <- airbnb
-airbnb_cleaned$neighbourhood_cleansed[airbnb_cleaned$neighbourhood_cleansed == "Mimico (includes Humber Bay Shores)"] <- "Mimico"
-airbnb_cleaned$neighbourhood_cleansed[airbnb_cleaned$neighbourhood_cleansed == "L'Amoreaux"] <- "LAmoreaux"
-airbnb_cleaned$neighbourhood_cleansed[airbnb_cleaned$neighbourhood_cleansed == "Tam O'Shanter-Sullivan"] <- "Tam OShanter-Sullivan"
-airbnb_cleaned$neighbourhood_cleansed[airbnb_cleaned$neighbourhood_cleansed == "O'Connor-Parkview"] <- "OConnor-Parkview"
 
-airbnb_cleaned <- airbnb_cleaned %>%
-  mutate(neighbourhood_cleansed = str_replace_all(neighbourhood_cleansed, '[-/\\.]', ' ')) 
-```
 
 ### 2.2.4 Cleaning of "Toronto Neighbourhood Information"
 
 Similar to the Airbnb dataset, we standardized the neighbourhood names with the existing datasets. We also extracted the <code>number_gyms</code> and <code>number_venues</code> variable columns.
 
-```{r toronto-info-cleaned, echo = F, include = F}
-venues_cleaned <- venues
-venues_cleaned$Neighborhood[venues_cleaned$Neighborhood == "Mimico (includes Humber Bay Shores)"] <- "Mimico"
-venues_cleaned$Neighborhood[venues_cleaned$Neighborhood == "L'Amoreaux"] <- "LAmoreaux"
-venues_cleaned$Neighborhood[venues_cleaned$Neighborhood == "Tam O'Shanter-Sullivan"] <- "Tam OShanter-Sullivan"
-venues_cleaned$Neighborhood[venues_cleaned$Neighborhood == "O'Connor-Parkview"] <- "OConnor-Parkview" 
-venues_cleaned$Neighborhood[venues_cleaned$Neighborhood == "North St. James Town"] <- "North St.James Town"
-venues_cleaned$Neighborhood[venues_cleaned$Neighborhood == "Cabbagetown-South St. James Town"] <- "Cabbagetown-South St.James Town"
-venues_cleaned$Neighborhood[venues_cleaned$Neighborhood == "Weston-Pelham Park"] <- "Weston-Pellam Park"
 
-venues_cleaned <- venues_cleaned %>%
-  dplyr::select(Neighborhood, number_gyms, number_venues) %>%
-  mutate(Neighborhood = str_replace_all(Neighborhood, '[-/\\.]', ' ')) 
-
-colnames(venues_cleaned) <- c('Neighbourhood', 'number_gyms', 'number_venues')
-```
 
 ## 2.3 Data Exploration
 
@@ -387,26 +156,7 @@ After data cleaning, we performed data exploration on all the datasets, using th
 
 The plot below shows the number of occurrences of crimes by the five Major Crime Indicator categories in 2016. From the bar plot, assault was the most common crime in 2016, having 18692 occurrences among 33056 cases of offences (56.5%). The next category with highest occurrence was "break and enter", with a count of 6398 times (about one-third of "Assault" cases).
 
-```{r crime-count, echo = F, fig.height=9, fig.width=18}
-
-crimes_cleaned %>%
-  ggplot(aes(mci_category, fill=mci_category)) +
-  geom_bar(show.legend = F) + 
-  labs(
-    title = 'Number of Occurrence by Major Crime Indicator Categories in Toronto (2016)',
-    x = '\nMajor Crime Indicator Categories\n',
-    y = 'Count',
-    caption = 'The bar plot shows the distribution of the five Major Crime Indicator categories in Toronto in 2016.\nAssault was the most frequent MCI offence.'
-  ) +
-  ylim(c(0, 20000)) +
-  geom_text(stat='count', aes(label=after_stat(count)), vjust=-1) +
-  theme_bw() +
-  theme(axis.text=element_text(size=14),
-        title = element_text(size=20),
-        legend.text = element_text(size=14)
-  )
-
-```
+![](Final-Report_files/figure-latex/crime-count-1.pdf)<!-- --> 
 
 The following stacked bar plots show the distribution of crime occurrences and where they occurred. From these plots, there were some interesting observations: 
 
@@ -419,114 +169,19 @@ The following stacked bar plots show the distribution of crime occurrences and w
 - The number of crimes occurred in houses were about 80% of that in apartments, but assuming that apartments usually house many more people than a house could, this suggested that the number of offences per person might be higher in houses (which appear in less busy areas) than apartments (which are often in city centers).
 
 
-```{r crime-count-by-premise, echo = F, fig.height=9, fig.width=18}
-
-crime_by_premise <- crimes_cleaned %>%
-  ggplot(aes(x = premises_type, fill = mci_category)) +
-  geom_bar() + 
-  coord_flip() + 
-  labs(
-    title = 'Number of Occurrence\nby Major Crime Indicator Categories\nby Premise Type in Toronto (2016)\n',
-    x = '\nPremise Type\n',
-    y = '\nCount\n',
-    caption = 'The stacked bar plot shows the\ndistribution of the five Major Crime Indicator categories\nby premise type in Toronto in 2016.\nCommerical areas and Apartment buildings are all\ntargets of offences.',
-    fill = 'MCI Category'
-  ) +
-  theme(axis.text=element_text(size=14),
-        title = element_text(size=20),
-        legend.text = element_text(size=14)
-  )
-
-crime_by_category <- crimes_cleaned %>%
-  ggplot(aes(fill = premises_type, x = mci_category)) +
-  geom_bar() + 
-  coord_flip() + 
-  labs(
-    title = 'Premise of Occurrence\nby Crime Indicator Categories\nin Toronto (2016)\n',
-    x = '\nMajor Crime Indicator Categories\n',
-    y = '\nCount\n',
-    caption = 'The stacked bar plot shows the distribution of premise of occurence\nby the five Major Crime Indicator categories in Toronto in 2016.\nRobbery and Autotheft mainly occurred outside, while\nBreak and Enter mostly occurred in Houses and Commercial areas.',
-    fill = 'Premises Type'
-  ) +
-  theme(axis.text=element_text(size=14),
-        title = element_text(size=20),
-        legend.text = element_text(size=14)
-  )
-
-plot_grid(crime_by_premise, crime_by_category, ncol=2)
-```
+![](Final-Report_files/figure-latex/crime-count-by-premise-1.pdf)<!-- --> 
 
 We also inspected the trend of offence occurrences with respect to time in 2016 with the histogram below. The trend shown in the plot suggests that there were no significant relationship between the day of year and the number of major crime occurred, as the plot appears to be close to a uniform distribution with only minor fluctuations periodically, with the exception of Day 1: the spike of assault cases on the first day of the year was interesting yet concerning. This spike does not seem to be from a data collection error, as the dataset had valid information on all the those cases on that day. This number might be related to new years celebration where people usually got drunk and high during celebration events and festivals, hence the increase in assault offences.
 
-```{r crime-by-time, echo = F, fig.height=9, fig.width=18}
-
-
-crimes_cleaned %>%
-  ggplot(aes(x = occurrencedayofyear, fill = mci_category)) +
-  geom_histogram(binwidth = 2) + 
-  labs(
-    title = 'Number of Occurrence by Major Crime Indicator Categories\nby Day of Year in Toronto (2016)\n',
-    x = '\nDay of Year\n',
-    y = '\nCount\n',
-    caption = 'The stacked bar plot shows the distribution of the five Major Crime Indicator categories by day of year in Toronto in 2016.\nA large amount of assault offences were found on New Years Day.',
-    fill = 'MCI Category'
-  ) +
-  theme(axis.text=element_text(size=14),
-        title = element_text(size=20),
-        legend.text = element_text(size=14)
-  )
-
-```
+![](Final-Report_files/figure-latex/crime-by-time-1.pdf)<!-- --> 
 
 
 The following barplot shows the Top 10 Neighbourhoods sorted by the number of major crime occurrences in 2016 in descending order. The results did not come as surprising, as the neighbourhood with the most population (Waterfront Communities Population: 65913) had the highest crime occurrences. Busy city centres were also in the plot (Bay Street, Church-Yonge). Interestingly, West Humber Clairville had significantly more auto theft offences compared to the other neighbourhoods, which was 80% of all the other 9 neighbourhoods combined (318 vs 385).
 
-```{r crimes_cleaned_by_mci, echo = F, include = F}
-
-crimes_by_neighbourhood %>%
-  head(n = 10) %>%
-  gt() %>%
-  tab_header(
-    title = 'Top 10 Neighbourhoods by Total MCI Offence Occurrences (2016)'
-  ) %>%
-  tab_style(
-    style = cell_borders(
-      sides = 'all',
-      color = "black",
-      weight = px(1.5),
-      style = "solid"
-    ),
-    locations = cells_body(
-      columns = everything(),
-      rows = everything()
-    )
-  ) %>%
-  opt_stylize(style = 6, color = "cyan")
-```
 
 
-```{r crime-by-neighbourhood, echo = F, fig.height=9, fig.width=18}
-crimes_by_neighbourhood %>%
-  arrange(desc(Total)) %>%
-  head(n = 10) %>%
-  gather('offence', 'count', -c(Hood_ID, Neighbourhood, Total)) %>%
-  ggplot(aes(x = reorder(Neighbourhood, Total), y = count, group = offence, fill = offence)) +
-  geom_bar(stat='identity') + 
-  coord_flip() + 
-  labs(
-    title = 'Top 10 Neighbourhoods by Number of Occurrence of Major Crimes\nin Toronto (2016)\n',
-    x = '\nNeighbourhood\n',
-    y = '\nCount\n',
-    fill = 'Offence',
-    caption = 'Neighbourhood with high population and busy city centers all had high MCI offence counts.'
-  ) +
-  theme(axis.text=element_text(size=14),
-        title = element_text(size=20),
-        legend.text = element_text(size=14)
-  )
-  
 
-```
+![](Final-Report_files/figure-latex/crime-by-neighbourhood-1.pdf)<!-- --> 
 
 
 For more exploration on how the MCI offences were distributed in Toronto's neighbourhoods, see the [Interactive Plots](https://tyler-cy.github.io/JSC370-Final/Interactive-Visuals.html).
@@ -539,45 +194,7 @@ To investigate whether there was a correlation between the number of Airbnb list
 
 Note that Waterfront Communities-The Island with 2754 listings and 1241 offences was omitted in the plot for aesthetic purposes. 
 
-```{r airbnb_count, echo = F, message = F, warning=F, fig.height=9, fig.width=18}
-airbnb_count <- airbnb_cleaned %>%
-  group_by(neighbourhood_cleansed) %>%
-  dplyr::summarise(count = n()) 
-
-colnames(airbnb_count) <- c('Neighbourhood', 'Airbnb')
-
-
-  
-crimes_cleaned_count <- crimes_cleaned %>%
-  group_by(Neighbourhood) %>%
-  dplyr::summarise(count = n())
-
-airbnb_vs_crimes <- merge(
-  x = airbnb_count,
-  y = crimes_cleaned_count,
-  all.x = T,
-  all.y = T,
-  by.x = 'Neighbourhood',
-  by.y = 'Neighbourhood'
-)
-colnames(airbnb_vs_crimes) <- c('Neighbourhood', 'Airbnb', 'Crime')
-
-airbnb_vs_crimes %>%
-  ggplot(aes(x = Airbnb, y = Crime)) +
-  geom_point() + 
-  geom_smooth(method='lm') + 
-  xlim(0, 650) +
-  labs(
-    title = 'Number of Airbnb Listings vs Number of Crime Offences by Neighbourhood in Toronto (2016)\n',
-    x = 'Number of Airbnb Listings',
-    y = 'Number of Crime Offences',
-    caption = 'The scatterplot shows how the number of airbnb listings affect the number of crime offences.\nThe plot suggests there is a positive correlation between these two numbers.\nNote that Waterfront Communities-The Island with 2754 listings and 1241 offences were omitted for aesthetic purposes.'
-  ) +
-  theme(axis.text=element_text(size=14),
-        title = element_text(size=20),
-        legend.text = element_text(size=14)
-  )
-```
+![](Final-Report_files/figure-latex/airbnb_count-1.pdf)<!-- --> 
 
 
 ### 2.3.3 Venues (POIs), Gyms, and MCI Offences
@@ -586,33 +203,7 @@ airbnb_vs_crimes %>%
 Next, we investigated if the number of MCI offences were related to the number of venues (POIs) and gyms by plotting a scatterplot with a best-fitted line. There is only a very weak positive relationship between these two factors, if not none at all. However, the plot shows that some outliers with high number of MCI offences occurred in neighbourhoods with the highest venues and gyms.
 
 
-```{r venues_count, echo = F, message = F, warning=F, fig.height=9, fig.width=18}
-venues_vs_crimes <- merge(
-  x = venues_cleaned,
-  y = crimes_cleaned_count,
-  all.x = T,
-  all.y = T,
-  by.x = 'Neighbourhood',
-  by.y = 'Neighbourhood'
-)
-colnames(venues_vs_crimes) <- c('Neighbourhood', 'Gyms', 'Venues', 'Crime')
-venues_vs_crimes$Places <- venues_vs_crimes$Gyms + venues_vs_crimes$Venues
-
-venues_vs_crimes %>%
-  ggplot(aes(x = Places, y = Crime)) +
-  geom_point() + 
-  geom_smooth(method='lm') + 
-  labs(
-    title = 'Number of POIs and Gyms vs Number of Crime Offences by Neighbourhood in Toronto (2016)\n',
-    x = 'Number of Points of Interests and Gyms',
-    y = 'Number of Crime Offences',
-    caption = 'The scatterplot shows how the number of POIs and gyms affect the number of crime offences.\nThe plot suggests there is a very weak correlation between these two numbers, if not none at all.'
-  ) +
-  theme(axis.text=element_text(size=14),
-        title = element_text(size=20),
-        legend.text = element_text(size=14)
-  )
-```
+![](Final-Report_files/figure-latex/venues_count-1.pdf)<!-- --> 
 
 
 ### 2.3.4 Neighbourhood Demographics and Crime Rate
@@ -624,47 +215,9 @@ We inspected the relationship between the crime rate and the variables of intere
 
 It is not surprising that the best fitted lines shows that the number of offences increased with the number of population in a neighbourhood. However, in all the subplots, the majority of the neighbourhoods had a population of less than 30 thousand, and there are outliers and influential points in the plots. A better indicator of crime rate versus population might be plotting the crime rate against the population density instead, which is more representative of the scale of crime rate in terms of neighbourhood size: a neighbourhood with higher population density is more likely to have higher crime rate.
 
-```{r crime-vs-population, echo = F, include = F}
-profiles_population_rel <- profiles_population %>%
-  t() %>%
-  as.data.frame() %>%
-  setNames(as.vector(.[4, ])) %>%
-  filter(!row_number() %in% c(1:5)) %>%
-  rownames_to_column(var = 'Neighbourhood') %>%
-  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) %>%
-  mutate_at(-c(1), as.numeric)
-
-crime_vs_population <- merge(
-  x = profiles_population_rel,
-  y = crimes_by_neighbourhood ,
-  all.x = T,
-  all.y = T,
-  by.x = 'Neighbourhood',
-  by.y = 'Neighbourhood'
-) %>%
-  mutate_at(c(2:9), remove_commas) %>%
-  pivot_longer(cols = c(4:9), values_to = 'Count', names_to = 'Offence') 
-```
-
-```{r crime-vs-population-2, echo = F, fig.width = 18, fig.height = 9, warning=F, message=F}
-crime_vs_population %>%
-  ggplot(aes(x = `Population, 2016`, y = Count, color=Offence)) +
-  geom_point() +
-  geom_smooth(method = 'lm', se=F, color='black') + 
-  facet_wrap(~Offence, scales = 'free') + 
-  labs(
-    title = 'Relationship between Neighbourhood Population and Number of MCI Offence Occurrence (Toronto 2016)',
-    x = '\nPopulation\n',
-    y = '\nCount\n'
-  ) +
-  theme(axis.text=element_text(size=14),
-        title = element_text(size=20),
-        legend.text = element_text(size=14),
-        strip.text.x = element_text(size = 18)
-  )
 
 
-```
+![](Final-Report_files/figure-latex/crime-vs-population-2-1.pdf)<!-- --> 
 
 
 
@@ -676,52 +229,30 @@ From the p-values below, we can see that the proportion of age groups are all st
 
 However, the estimated coefficient for the intercept is much larger than the estimated coefficient for the age groups, thus any change in the percentages of age groups would only change the estimated crime rate slightly. This strongly suggested that there were other factors which affect crime rate, and the p-values show that age group is one of the significant factors. 
 
-```{r crime-vs-age, echo = F, include = F}
-
-profiles_age_rel <- profiles_age %>%
-  t() %>%
-  as.data.frame() %>%
-  setNames(as.vector(.[4, ])) %>%
-  filter(!row_number() %in% c(1:5)) %>%
-  rownames_to_column(var = 'Neighbourhood') %>%
-  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) %>%
-  mutate_at(2:7, as.numeric)
-
-
-  
-
-crime_vs_age <- merge(
-  x = profiles_age_rel,
-  y = crimes_by_neighbourhood ,
-  all.x = T,
-  all.y = T,
-  by.x = 'Neighbourhood',
-  by.y = 'Neighbourhood'
-) %>%
-  mutate_at(c(2:10), remove_commas)
-```
 
 
 
-```{r crime-vs-age-lm, fig.width = 18, fig.height=9, echo = F}
-crime_vs_age_lm_table <- crime_vs_age[, c(2:5, 14)]
-lm_age <- lm(data = crime_vs_age_lm_table, formula = Total ~ .)
 
-lm_age %>%
-  tidy() %>%
-  kable(
-    caption = 'Coefficient Estimates of a Linear Regression Model for Estimating MCI Offence Count (Age Groups)',
-    col.names = c('Terms', 'Estimate', 'Std. Error', 't-value', 'p-value'),
-    digits = 3
-  )
+\begin{table}
 
-# aov_age_summary_df <- data.frame(unclass(summary(aov_age)), check.names = F, stringsAsFactors = F) %>% 
-#   mutate_if(is.numeric, round, 3) %>% 
-#   rownames_to_column(var = 'Factors') %>%
-#   mutate(Factors = str_replace_all(Factors, '`', '')) 
-
-
-```
+\caption{\label{tab:crime-vs-age-lm}Coefficient Estimates of a Linear Regression Model for Estimating MCI Offence Count (Age Groups)}
+\centering
+\begin{tabular}[t]{l|r|r|r|r}
+\hline
+Terms & Estimate & Std. Error & t-value & p-value\\
+\hline
+(Intercept) & 57.993 & 21.730 & 2.669 & 0.009\\
+\hline
+`Children (0-14 years)` & -0.032 & 0.012 & -2.660 & 0.009\\
+\hline
+`Youth (15-24 years)` & 0.125 & 0.015 & 8.320 & 0.000\\
+\hline
+`Working Age (25-54 years)` & 0.014 & 0.003 & 4.286 & 0.000\\
+\hline
+`Pre-retirement (55-64 years)` & -0.065 & 0.019 & -3.351 & 0.001\\
+\hline
+\end{tabular}
+\end{table}
 
 
 #### 2.3.4.3 Relationship between Education and Crime Rate
@@ -730,105 +261,48 @@ We also fitted a basic linear model where the response variable is the number of
 
 Similar to the estimated coefficients for age groups, the estimated coefficient for the intercept (-581) is negative and the estimated coefficients for the factors were positive and much larger (708 and 2299). This strongly suggested that we should also look at other factors at the same time. The p-values suggest that education is a significant factor on crime rate alone, so it might be useful to combine education with other variables and check if the combinations affect crime rate altogether.
 
-```{r crime-vs-education, echo=F}
-
-profiles_edu_rel <- profiles_education %>%
-  t() %>%
-  as.data.frame() %>%
-  setNames(as.vector(.[4, ])) %>%
-  filter(!row_number() %in% c(1:5)) %>%
-  rownames_to_column(var = 'Neighbourhood') %>%
-  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) %>%
-  mutate_at(2:4, as.numeric)
-
-crime_vs_education <- merge(
-  x = profiles_edu_rel,
-  y = crimes_by_neighbourhood ,
-  all.x = T,
-  all.y = T,
-  by.x = 'Neighbourhood',
-  by.y = 'Neighbourhood'
-) 
-
-crime_vs_education <- merge(
-  x = profiles_population_rel,
-  y = crime_vs_education ,
-  all.x = T,
-  all.y = T,
-  by.x = 'Neighbourhood',
-  by.y = 'Neighbourhood'
-) 
-
-crime_vs_education <- crime_vs_education %>%
-  mutate_at(c(2:5), as.numeric) %>%
-  mutate_at(c(3:5), ~ .x/`Population, 2016`)
-```
 
 
-```{r crime-vs-education-lm, echo=F}
-crime_vs_edu_lm_table <- crime_vs_education[, c(3,5, 12)]
-lm_edu <- lm(data = crime_vs_edu_lm_table, formula = Total ~ .)
 
-lm_edu %>%
-  tidy() %>%
-  kable(
-    caption = 'Coefficient Estimates of a Linear Regression Model for Estimating MCI Offence Count (Education)',
-    col.names = c('Terms', 'Estimate', 'Std. Error', 't-value', 'p-value'),
-    digits = 3
-  )
-```
+\begin{table}
+
+\caption{\label{tab:crime-vs-education-lm}Coefficient Estimates of a Linear Regression Model for Estimating MCI Offence Count (Education)}
+\centering
+\begin{tabular}[t]{l|r|r|r|r}
+\hline
+Terms & Estimate & Std. Error & t-value & p-value\\
+\hline
+(Intercept) & -581.034 & 256.482 & -2.265 & 0.025\\
+\hline
+`  Postsecondary certificate, diploma or degree` & 708.739 & 250.138 & 2.833 & 0.005\\
+\hline
+`  Secondary (high) school diploma or equivalency certificate` & 2299.184 & 711.735 & 3.230 & 0.002\\
+\hline
+\end{tabular}
+\end{table}
 
 
 #### 2.3.4.4 Relationship between Employment and Crime Rate
 
 The fitted linear model below shows that the effect of the number of people who did not work in a neighbourhood on crime rate was statistically significant. This result aligned with the common consensus that unemployment rate was positively correlated with crime rate (Farrington et al. 1986^[Farrington, D. P., Gallagher, B., Morley, L., St. Ledger, R. J., & West, D. J. (1986). UNEMPLOYMENT, SCHOOL LEAVING, AND CRIME. The British Journal of Criminology, 26(4), 335–356. http://www.jstor.org/stable/23637076], John Howard Society of Ontario 2009^[https://johnhoward.on.ca/wp-content/uploads/2014/09/facts-24-crime-and-unemployment-whats-the-link-march-2009.pdf]).
 
-```{r crime-vs-employment, echo = F}
-profiles_employment_rel <- profiles_employment %>%
-  t() %>%
-  as.data.frame() %>%
-  setNames(as.vector(.[4, ])) %>%
-  filter(!row_number() %in% c(1:5)) %>%
-  rownames_to_column(var = 'Neighbourhood') %>%
-  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) %>%
-  mutate_at(-c(1), as.numeric)
 
 
-crime_vs_employment <- merge(
-  x = profiles_employment_rel,
-  y = crimes_by_neighbourhood ,
-  all.x = T,
-  all.y = T,
-  by.x = 'Neighbourhood',
-  by.y = 'Neighbourhood'
-) 
 
-crime_vs_employment <- merge(
-  x = profiles_population_rel,
-  y = crime_vs_employment ,
-  all.x = T,
-  all.y = T,
-  by.x = 'Neighbourhood',
-  by.y = 'Neighbourhood'
-) 
-```
+\begin{table}
 
-
-```{r crime-vs-employment-lm, echo = F}
-
-crime_vs_employment_lm_table <- crime_vs_employment[, c(3, 12)]
-lm_employment <- lm(data = crime_vs_employment_lm_table, formula = Total ~ .)
-
-lm_employment %>%
-  tidy() %>%
-  kable(
-    caption = 'Coefficient Estimates of a Linear Regression Model for Estimating MCI Offence Count (Employment Status)',
-    col.names = c('Terms', 'Estimate', 'Std. Error', 't-value', 'p-value'),
-    digits = 3
-  )
-
-
-```
+\caption{\label{tab:crime-vs-employment-lm}Coefficient Estimates of a Linear Regression Model for Estimating MCI Offence Count (Employment Status)}
+\centering
+\begin{tabular}[t]{l|r|r|r|r}
+\hline
+Terms & Estimate & Std. Error & t-value & p-value\\
+\hline
+(Intercept) & 57.258 & 28.187 & 2.031 & 0.044\\
+\hline
+`  Did not work` & 0.032 & 0.004 & 7.282 & 0.000\\
+\hline
+\end{tabular}
+\end{table}
 
 
 
@@ -836,73 +310,24 @@ lm_employment %>%
 
 We plotted the number of MCI offences against the proprtion of immigrants in the 140 neighbourhoods, separated by offence type and also included a total count. From these plots, we can see that as the proportion of immigrants increased in a neighbourhood, the number of crimes committed decreases, with the exception of "Break and Enter" which stayed roughly the same. This aligned with our prior findings which concluded that the number of immigrants (statistically-)significantly reduced the number of crimes in the area^[Statistics Canada. (n.d.). Main article. Neighbourhood Characteristics and the Distribution of Police-reported Crime in the City of Toronto. Retrieved March 13, 2023, from https://www150.statcan.gc.ca/n1/pub/85-561-m/2009018/part-partie1-eng.htm]. 
 
-```{r crime-vs-immgiration, echo = F}
-profiles_immigrant_rel <- profiles_immigrant %>%
-  t() %>%
-  as.data.frame() %>%
-  setNames(as.vector(.[4, ])) %>%
-  filter(!row_number() %in% c(1:5)) %>%
-  rownames_to_column(var = 'Neighbourhood') %>%
-  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) %>%
-  mutate_at(-c(1), as.numeric)
-
-crime_vs_immigrant <- merge(
-  x = profiles_immigrant_rel,
-  y = crimes_by_neighbourhood ,
-  all.x = T,
-  all.y = T,
-  by.x = 'Neighbourhood',
-  by.y = 'Neighbourhood'
-) 
-
-crime_vs_immigrant <- merge(
-  x = profiles_population_rel,
-  y = crime_vs_immigrant ,
-  all.x = T,
-  all.y = T,
-  by.x = 'Neighbourhood',
-  by.y = 'Neighbourhood'
-) 
-
-crime_vs_immigrant <- crime_vs_immigrant %>%
-  mutate_at(-c(1), as.numeric)
 
 
-crime_vs_immigrant <- crime_vs_immigrant %>%
-  mutate("Immigration_Rate" = .[[3]]/`Population, 2016`)
-```
+\begin{table}
 
-```{r crime-vs-immigration-lm, echo = F, message = F, warning=F, fig.width=18, fig.height=9}
+\caption{\label{tab:crime-vs-immigration-lm}Coefficient Estimates of a Linear Regression Model for Estimating MCI Offence Count (Employment Status)}
+\centering
+\begin{tabular}[t]{l|r|r|r|r}
+\hline
+Terms & Estimate & Std. Error & t-value & p-value\\
+\hline
+(Intercept) & 378.555 & 59.861 & 6.324 & 0.000\\
+\hline
+Immigration\_Rate & -278.403 & 112.786 & -2.468 & 0.015\\
+\hline
+\end{tabular}
+\end{table}
 
-
-crime_vs_immigrant_lm_table <- crime_vs_immigrant[, c(12, 13)]
-lm_immigrant <- lm(data = crime_vs_immigrant_lm_table, formula = Total ~ .)
-
-lm_immigrant %>%
-  tidy() %>%
-  kable(
-    caption = 'Coefficient Estimates of a Linear Regression Model for Estimating MCI Offence Count (Employment Status)',
-    col.names = c('Terms', 'Estimate', 'Std. Error', 't-value', 'p-value'),
-    digits = 3
-  )
-
-crime_vs_immigrant %>%
-  pivot_longer(cols = c(7:12), values_to = 'Count', names_to = 'Offence') %>%
-  ggplot(aes(x = `Immigration_Rate`, y = Count, color=Offence)) +
-  geom_point() +
-  geom_smooth(method = 'lm', se=F, color='black') + 
-  facet_wrap(~Offence, scales = 'free') + 
-  labs(
-    title = 'Relationship between Neighbourhood Population and Number of MCI Offence Occurrence (Toronto 2016)',
-    x = '\nPopulation\n',
-    y = '\nCount\n'
-  ) +
-  theme(axis.text=element_text(size=14),
-        title = element_text(size=20),
-        legend.text = element_text(size=14),
-        strip.text.x = element_text(size = 18)
-  )
-```
+![](Final-Report_files/figure-latex/crime-vs-immigration-lm-1.pdf)<!-- --> 
 
 
 
@@ -910,102 +335,18 @@ crime_vs_immigrant %>%
 
 A racially-diversed neighbourhood were found to be linked to lower crime rate, especially in rural areas^[Kim, Y.-A., &amp; Wo, J. C. (2022, April 1). Racially diverse neighborhoods in diverse areas are linked to lower crime rates. Racially diverse neighborhoods in diverse areas are linked to lower crime rates Comments. Retrieved March 13, 2023, from https://blogs.lse.ac.uk/usappblog/2022/04/01/racially-diverse-neighborhoods-in-diverse-areas-are-linked-to-lower-crime-rates/ ]. Hence, we chose to explore the relationship of neighbourhood crime rate and the proportion of visible minority because we believed that this feature was also related to immigration and citizenship status, which was found to be correlated with crime rate^[Statistics Canada. (n.d.). Main article. Neighbourhood Characteristics and the Distribution of Police-reported Crime in the City of Toronto. Retrieved March 13, 2023, from https://www150.statcan.gc.ca/n1/pub/85-561-m/2009018/part-partie1-eng.htm]. However, unlike the number of immigrants, we could see that crime rates were likely to be weakly positively correlated with the proportion of visible minority in the neighbourhood from the plots. The number of outliers in the plots might suggest why we obtained a different result than expected.
 
-```{r crime-vs-minority, echo = F}
-profiles_minority_rel <- profiles_minority %>%
-  t() %>%
-  as.data.frame() %>%
-  setNames(as.vector(.[4, ])) %>%
-  filter(!row_number() %in% c(1:5)) %>%
-  rownames_to_column(var = 'Neighbourhood') %>%
-  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) %>%
-  mutate_at(-c(1), as.numeric)
 
-crime_vs_minority <- merge(
-  x = profiles_minority_rel,
-  y = crimes_by_neighbourhood ,
-  all.x = T,
-  all.y = T,
-  by.x = 'Neighbourhood',
-  by.y = 'Neighbourhood'
-) 
 
-crime_vs_minority <- merge(
-  x = profiles_population_rel,
-  y = crime_vs_minority ,
-  all.x = T,
-  all.y = T,
-  by.x = 'Neighbourhood',
-  by.y = 'Neighbourhood'
-) 
-
-crime_vs_minority <- crime_vs_minority %>%
-  mutate_at(c(2:11), as.numeric) %>%
-  mutate('Minority_Ratio' = .[[3]]/`Population, 2016`)
-```
-
-```{r crime-vs-minority-plot, echo = F, fig.width = 18, fig.height = 9, warning=F, message=F}
-crime_vs_minority %>%
-  pivot_longer(cols = 6:11, names_to = 'Offence', values_to = 'Count') %>%
-  ggplot(aes(x = Minority_Ratio, y = Count, color=Offence)) +
-  geom_point() +
-  geom_smooth(method = 'lm', se=F, color='black') + 
-  facet_wrap(~Offence, scales = 'free') + 
-  labs(
-    title = 'Relationship between Neighbourhood Visible Minority Proportion\nand Number of MCI Offence Occurrence (Toronto 2016)',
-    x = '\nVisible Minority Proportion\n',
-    y = '\nCount\n'
-  ) +
-  theme(axis.text=element_text(size=14),
-        title = element_text(size=20),
-        legend.text = element_text(size=14),
-        strip.text.x = element_text(size = 18)
-  )
-```
+![](Final-Report_files/figure-latex/crime-vs-minority-plot-1.pdf)<!-- --> 
 
 
 #### 2.3.4.7 Relationship between Income and Crime Rate
 
 To estimate the effect of average individual income on a neighbourhood's crime rate, we plotted the number of offences against average income tax per offence type. The data for income groups were discovered to be corrupted during data cleaning (see Section 2.2.2). Thus, we used the average income tax as an indicator of household income level for each neighbourhood. In the subplots, the numbers of all offence types decrease as the average income taxes of the neighbourhood increase, with the exception of "Break and Enter". This might be explained by the fact that wealthy neighbourhoods were more likely to have better security, and relative risk associated with theft in wealthy neighbourhoods outweighted the possibility of stealing more expensive goods, thus deterring thefts^[Chamberlain, A. W., &amp; Boggess, L. N. (2016, September 26). Why disadvantaged neighborhoods are more attractive targets for burgling than wealthy ones. Why disadvantaged neighborhoods are more attractive targets for burgling than wealthy ones Comments. Retrieved March 13, 2023, from https://blogs.lse.ac.uk/usappblog/2016/09/26/why-disadvantaged-neighborhoods-are-more-attractive-targets-for-burgling-than-wealthy-ones/].
 
-```{r crime-vs-income, echo = F}
-profiles_income_rel <- profiles_income_tax %>%
-  t() %>%
-  as.data.frame() %>%
-  setNames(as.vector(.[4, ])) %>%
-  filter(!row_number() %in% c(1:5)) %>%
-  rownames_to_column(var = 'Neighbourhood') %>%
-  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) %>%
-  mutate_at(-c(1), as.numeric)
 
 
-crime_vs_income <- merge(
-  x = profiles_income_rel,
-  y = crimes_by_neighbourhood ,
-  all.x = T,
-  all.y = T,
-  by.x = 'Neighbourhood',
-  by.y = 'Neighbourhood'
-) 
-```
-
-```{r crime-vs-income-plot, echo = F, fig.width = 18, fig.height = 9, warning=F, message=F}
-crime_vs_income %>%
-  pivot_longer(cols = 4:9, names_to = 'Offence', values_to = 'Count') %>%
-  ggplot(aes(x = .[[2]], y = Count, color = Offence)) +
-  geom_point() +
-  geom_smooth(method = 'lm', se=F, color='black') + 
-  facet_wrap(~Offence, scales = 'free') + 
-  labs(
-    title = 'Relationship between Neighbourhood Average Income (by Average Income Tax)\nand Number of MCI Offence Occurrence (Toronto 2016)',
-    x = '\nIncome (Average Income Tax)\n',
-    y = '\nCount\n'
-  ) +
-  theme(axis.text=element_text(size=14),
-        title = element_text(size=20),
-        legend.text = element_text(size=14),
-        strip.text.x = element_text(size = 18)
-  )
-```
+![](Final-Report_files/figure-latex/crime-vs-income-plot-1.pdf)<!-- --> 
 
 
 
@@ -1033,50 +374,11 @@ Although our focus was to investigate which factors affected crime rate the most
 
 
 
-```{r everything, echo = F, include = F}
-VOI <- c('airbnb_count', 'venues_cleaned',  # new data
-                'profiles_age_rel', 'profiles_edu_rel', 'profiles_employment_rel', 'profiles_immigrant_rel',
-                'profiles_income_rel', 'profiles_minority_rel', 'profiles_population_rel')
 
-everything <- crimes_by_neighbourhood
-for (d in VOI){
-  everything <- merge(
-    x = everything,
-    y = get(d),
-    all.x = T,
-    all.y = T,
-    by.x = 'Neighbourhood',
-    by.y = 'Neighbourhood'
-  )
-  
-}
-colnames(everything) <- c('neighbourhood', 'id', 'assualt', 'auto_theft', 'break_and_enter', 'robbery', 'theft_over', 'total', 'airbnb', 'gyms', 'venues', 'children', 'youth', 'working_age', 'pre_retirement', 'seniors', 'old_seniors', 'postsecondary', 'no_cert', 'secondary', 'no_work', 'full_time', 'part_time', 'non_immigrants', 'immigrants', 'non-pr', 'income', 'visible_minority', 'non_visible_minority', 'population')
-```
 
-```{r everything-needed, echo = F, include = F}
-preds <- everything %>%
-  dplyr::select(-c(1:7)) %>%
-  mutate(children_ratio = children/working_age,
-         youth_ratio = youth/working_age,
-         pre_retirement_ratio = pre_retirement/working_age,
-         seniors_ratio = seniors/working_age,
-         postsecondary_ratio = postsecondary/no_cert,
-         secondary_ratio = secondary/no_cert,
-         full_time_ratio = full_time/no_work,
-         part_time_ratio = part_time/no_work,
-         immigrants_ratio = immigrants/non_immigrants,
-         visible_minority_ratio = visible_minority/non_visible_minority) %>%
-  dplyr::select(c(1:4, 23:33))
 
-preds
-```
 
-```{r, echo = F, include = F}
-set.seed(123)
-train_ind <- sample(x = nrow(preds), size = floor(0.8 * nrow(preds)))
-train <- preds[train_ind, ]
-test <- preds[-train_ind, ]
-```
+
 
 
 # 3. Results
@@ -1085,65 +387,82 @@ test <- preds[-train_ind, ]
 
 The final Poisson regression model fitted was created with all predictors with the exception of <code>part_time_ratio</code> (ratio between number of people working part time vs not working) and <code>secondary_ratio</code> (ratio between number of people with secondary level certificate vs no education/certificate). 
 
-```{r poisson, echo = F, include = F}
-pois_full <- glm(formula = total ~ ., family = 'poisson', data = train)
-summary(pois_full)
-vif(pois_full)
-
-pois_backward <- step(pois_full, direction = 'backward', trace = 0)
-summary(pois_backward)
-vif(pois_backward)
-
-pois_part <- glm(formula = total ~ . - part_time_ratio - secondary_ratio, family = 'poisson', data = train)
-summary(pois_part)
-vif(pois_part)
-```
-
-```{r poisson-fig, echo = F, fig.width=18, fig.height=9}
-pois_est <- pois_part %>%
-  tidy() %>%
-  kable(
-    caption = 'Coefficient Estimates of Poisson Regression Model for Estimating MCI Offence Count',
-    col.names = c('Terms', 'Estimate', 'Std. Error', 't-value', 'p-value'),
-    digits = 3
-  ) %>%
-  kable_styling(full_width = FALSE, position = "float_left")
-
-```
 
 
 
 
-```{r negbin, echo = F, include = F}
-negbin_full <- glm.nb(formula = total ~ ., data = train)
-summary(negbin_full)
-vif(negbin_full)
 
-negbin_backward <- step(negbin_full, direction = 'backward', trace = 0)
-summary(negbin_backward)
-vif(negbin_backward)
 
-# negbin_part <- glm.nb(formula = total ~ ., data = train)
-# summary(negbin_part)
-# vif(negbin_part)
-```
 
-```{r nb-fig, echo = F, fig.width=18, fig.height=9}
-negbin_est <- negbin_backward %>%
-  tidy() %>%
-  kable(
-    caption = 'Coefficient Estimates of Negative Binomial Regression Model for Estimating MCI Offence Count',
-    col.names = c('Terms', 'Estimate', 'Std. Error', 't-value', 'p-value'),
-    digits = 3,
-  ) %>%
-  kable_styling(full_width = FALSE, position = "float_right")
 
-```
 
-```{r reg_comparison, echo = F, fig.width=18, fig.height=9}
-kables(list(pois_est, negbin_est)) %>% 
-  kable_styling()
-```
+
+
+\begin{table}
+\begin{wraptable}{l}{0pt}
+
+\caption{\label{tab:poisson-fig}Coefficient Estimates of Poisson Regression Model for Estimating MCI Offence Count}
+\centering
+\begin{tabular}[t]{l|r|r|r|r}
+\hline
+Terms & Estimate & Std. Error & t-value & p-value\\
+\hline
+(Intercept) & 5.659 & 0.080 & 70.971 & 0.000\\
+\hline
+airbnb & 0.000 & 0.000 & 7.897 & 0.000\\
+\hline
+gyms & -0.080 & 0.007 & -11.191 & 0.000\\
+\hline
+venues & 0.001 & 0.000 & 2.186 & 0.029\\
+\hline
+population & 0.000 & 0.000 & 51.775 & 0.000\\
+\hline
+children\_ratio & -1.700 & 0.089 & -19.186 & 0.000\\
+\hline
+youth\_ratio & 4.113 & 0.118 & 34.733 & 0.000\\
+\hline
+pre\_retirement\_ratio & -2.961 & 0.208 & -14.233 & 0.000\\
+\hline
+seniors\_ratio & -0.400 & 0.097 & -4.116 & 0.000\\
+\hline
+postsecondary\_ratio & -0.031 & 0.002 & -16.487 & 0.000\\
+\hline
+full\_time\_ratio & -0.100 & 0.023 & -4.276 & 0.000\\
+\hline
+immigrants\_ratio & -0.358 & 0.020 & -18.242 & 0.000\\
+\hline
+visible\_minority\_ratio & 0.021 & 0.003 & 7.526 & 0.000\\
+\hline
+\end{tabular}
+\end{wraptable}\begin{wraptable}{r}{0pt}
+
+\caption{\label{tab:nb-fig}Coefficient Estimates of Negative Binomial Regression Model for Estimating MCI Offence Count}
+\centering
+\begin{tabular}[t]{l|r|r|r|r}
+\hline
+Terms & Estimate & Std. Error & t-value & p-value\\
+\hline
+(Intercept) & 5.057 & 0.300 & 16.841 & 0.000\\
+\hline
+gyms & -0.072 & 0.033 & -2.198 & 0.028\\
+\hline
+venues & 0.003 & 0.002 & 1.768 & 0.077\\
+\hline
+population & 0.000 & 0.000 & 12.022 & 0.000\\
+\hline
+children\_ratio & -1.591 & 0.460 & -3.460 & 0.001\\
+\hline
+youth\_ratio & 3.945 & 0.657 & 6.004 & 0.000\\
+\hline
+pre\_retirement\_ratio & -2.863 & 0.691 & -4.143 & 0.000\\
+\hline
+postsecondary\_ratio & -0.042 & 0.010 & -4.057 & 0.000\\
+\hline
+immigrants\_ratio & -0.253 & 0.077 & -3.265 & 0.001\\
+\hline
+\end{tabular}
+\end{wraptable}
+\end{table}
 
 
 The comparison table above shows the coefficient estimates of the predictors selected in the fitted Poisson and negative binomial models. Predictors which appeared in both model had highly similar coefficient estimates. 
@@ -1156,67 +475,26 @@ The predictors which was most impactful were the age groups: a one-unit increase
 All predictors in both models, with the exception of the number of venues in the negative binomial model, were all statistically significant at the 5% level.
 
 
-```{r pois-train-mse, echo = F, include = F}
-pois_pred_train <- predict.glm(pois_part, newdata = train, type = 'response')
-data.frame(pois_pred_train, train$total)
-sum((pois_pred_train - train$total)^2) / nrow(train)
-```
-
-```{r pois-test-mse, echo = F, include = F}
-pois_pred_test <- predict(pois_part, test, type = 'response')
-data.frame(pois_pred_test, test$total)
-sum((pois_pred_test - test$total)^2) / nrow(test)
-```
-
-```{r negbin-train-mse, echo = F, include = F}
-negbin_pred_train <- predict(negbin_backward, train, type = 'response')
-data.frame(negbin_pred_train, train$total, (negbin_pred_train - train$total)^2)
-sum((negbin_pred_train - train$total)^2) / nrow(train)
-
-```
-
-```{r negbin-test-mse, echo = F, include = F}
-negbin_pred_test <- predict(negbin_backward, test, type = 'response')
-data.frame(negbin_pred_test, test$total, (negbin_pred_test - test$total)^2)
-sum((negbin_pred_test - test$total)^2) / nrow(test)
-```
 
 
-```{r pois-nb-summary, echo = F}
-pois_pred_train <- predict.glm(pois_part, newdata = train, type = 'response')
-pois_pred_test <- predict(pois_part, test, type = 'response')
-negbin_pred_train <- predict(negbin_backward, train, type = 'response')
-negbin_pred_test <- predict(negbin_backward, test, type = 'response')
 
-pois_summary <- c('Poisson', sum((pois_pred_train - train$total)^2) / nrow(train), sum((pois_pred_test - test$total)^2) / nrow(test), pois_part$aic, pois_part$deviance)
-nb_summary <-c('Negative Binomial', sum((negbin_pred_train - train$total)^2) / nrow(train), sum((negbin_pred_test - test$total)^2) / nrow(test), negbin_backward$aic, negbin_backward$deviance)
 
-pois_nb_summary <- t(data.frame(pois_summary, nb_summary))
-colnames(pois_nb_summary) <- c('Model', 'Train MSE', 'Test MSE', 'AIC', 'Deviance')
-data.frame(pois_nb_summary) %>%
-  mutate_at(2:5, as.numeric) %>%
-  gt() %>%
-  fmt_number(columns = 2:5,
-             decimals = 2,
-             sep_mark = '') %>%
-  tab_header(
-    title = 'Poisson and Negative Binomial Regression Model Statistics'
-  ) %>%
-  tab_style(
-    style = cell_borders(
-      sides = 'all',
-      color = "black",
-      weight = px(1.5),
-      style = "solid"
-    ),
-    locations = cells_body(
-      columns = everything(),
-      rows = everything()
-    )
-  ) %>%
-  opt_stylize(style = 6, color = "cyan")
 
-```
+
+
+
+
+\begin{longtable}{lrrrr}
+\caption*{
+{\large Poisson and Negative Binomial Regression Model Statistics}
+} \\ 
+\toprule
+Model & Train.MSE & Test.MSE & AIC & Deviance \\ 
+\midrule
+Poisson & $9247.67$ & $15630.57$ & $4167.50$ & $3349.88$ \\ 
+Negative Binomial & $12793.42$ & $17805.41$ & $1286.32$ & $113.71$ \\ 
+\bottomrule
+\end{longtable}
 
 
 The performance of the negative binomial regression model was much better than the Poission regression model. Although the former model had higher training and testing MSEs (12793.42 vs Poisson's 9247.67, 17805.41 vs Poisson's 15630.57), it had much lower AIC (1286.32 vs 4167.50) and deviance (113.71 vs 3349.88). Despite their differences, both models could be adapted as baseline models to evaluate the performance of the advanced machine learning models.
@@ -1224,55 +502,22 @@ The performance of the negative binomial regression model was much better than t
 ## 3.2 Regression Tree and Random Forest
 
 
-```{r reg-tree, echo = F, fig.height=9, fig.width=18}
-treefit <- rpart(formula = total ~ ., data = train, method = "anova", control = list(cp = 0))
-rpart.plot(treefit, main = 'Fitted Regression Tree Model for Predicting Neighbourhood MCI Offence Count')
-```
-
-```{r random-forest, echo = F, include = F}
-set.seed(123)
-forest <- randomForest(total ~ . , 
-                       data = train,
-                       na.action = na.omit,
-                       ntree = 5000)
-```
+![](Final-Report_files/figure-latex/reg-tree-1.pdf)<!-- --> 
 
 
-```{r ml-summary, echo = F}
-tree_pred_test <- predict(treefit, test)
-tree_pred_train <- predict(treefit, train)
-forest_pred_train <- predict(forest, train, type = 'response')
-forest_pred_test <- predict(forest, test, type = 'response')
 
-tree_summary <- c('Regression Tree', sum((tree_pred_train - train$total)^2) / nrow(train), sum((tree_pred_test - test$total)^2) / nrow(test))
-forest_summary <-c('Random Forest', sum((forest_pred_train - train$total)^2) / nrow(train), sum((forest_pred_test - test$total)^2) / nrow(test))
-ml_summary <- t(data.frame(tree_summary, forest_summary))
-colnames(ml_summary) <- c('Model', 'Train MSE', 'Test MSE')
 
-data.frame(ml_summary) %>%
-  mutate_at(2:3, as.numeric) %>%
-  gt() %>%
-  fmt_number(columns = 2:3,
-             decimals = 2,
-             sep_mark = '') %>%
-  tab_header(
-    title = 'Regression Tree and Random Forest Model Statistics'
-  ) %>%
-  tab_style(
-    style = cell_borders(
-      sides = 'all',
-      color = "black",
-      weight = px(1.5),
-      style = "solid"
-    ),
-    locations = cells_body(
-      columns = everything(),
-      rows = everything()
-    )
-  ) %>%
-  opt_stylize(style = 6, color = "cyan")
-
-```
+\begin{longtable}{lrr}
+\caption*{
+{\large Regression Tree and Random Forest Model Statistics}
+} \\ 
+\toprule
+Model & Train.MSE & Test.MSE \\ 
+\midrule
+Regression Tree & $15215.15$ & $21061.30$ \\ 
+Random Forest & $3113.12$ & $10966.88$ \\ 
+\bottomrule
+\end{longtable}
 
 
 The fitted regression tree model with all predictors were simple. The decision nodes were created by only a few predictors of interest: population, the number of Airbnbs, the ratio of people with postsecondary education vs no certificates/education, and the ratio between visible and non-visible minorities. The resulting tree had only 9 leaves, but the training and test mean-squared-error were both similar to the baseline regression models. However, the performance of the random forest was much better than all three model others: it had a training and test MSE of 3113.12 and 10966.88 respectively.
@@ -1281,58 +526,15 @@ Despite the simplicity of the regression tree, it may be useful to use the model
 
 
 
-```{r reg-tree-vip-plot, echo = F, fig.height=9, fig.width=16}
-rt_vip_plot <- data.frame(importance = treefit$variable.importance) %>% 
-  tibble::rownames_to_column() %>% 
-  rename("variable" = rowname) %>% 
-  arrange(importance) %>%
-  mutate(variable = forcats::fct_inorder(variable)) %>%
-  ggplot(aes(x = variable, y = importance)) +
-  geom_bar(stat='identity', width = 0.5) + 
-  coord_flip() +
-  labs(
-    title = 'Variable Importance Plot of Regression Tree Model',
-    x = 'Variable',
-    y = 'Variable Importance'
-  ) +
-  theme(aspect.ratio = 1/2.5,
-        axis.text=element_text(size=14),
-        title = element_text(size=14),
-        legend.text = element_text(size=14)
-  )
-```
-
-```{r random-forest-vip, echo = F, include = F, fig.width = 18, fig.height = 9}
-rf_vip <- varImpPlot(forest)
-
-```
-
-```{r random-forest-vip-plot, echo = F, fig.width = 18, fig.height = 9}
-rf_vip_plot <- data.frame(IncNodePurity = rf_vip) %>% 
-  tibble::rownames_to_column() %>% 
-  rename("variable" = rowname) %>% 
-  arrange(IncNodePurity) %>%
-  mutate(variable = forcats::fct_inorder(variable)) %>%
-  ggplot(aes(x = variable, y = IncNodePurity)) +
-  geom_bar(stat='identity', width = 0.5) + 
-  coord_flip() +
-  labs(
-    title = 'Variable Importance Plot of Random Forest Model',
-    x = 'Variable',
-    y = 'IncNodePurity'
-  ) +
-  theme(aspect.ratio = 1/2.5,
-        axis.text=element_text(size=14),
-        title = element_text(size=14),
-        legend.text = element_text(size=14)
-  )
-```
 
 
 
-```{r vip-plots, echo = F, fig.width = 18, fig.height = 4.5}
-plot_grid(rt_vip_plot, rf_vip_plot, ncol=2, labels = 'Variance Importance Plot of Fitted Regression Tree and Random Forest Models', label_size = 25, label_x = -0.5)
-```
+
+
+
+
+
+![](Final-Report_files/figure-latex/vip-plots-1.pdf)<!-- --> 
 
 
 In general, both the regression tree and random forest suggested that population and the number of airbnbs were the most important factors of crime count, followed by education, age and work status (with varying importance), then immigration and citizenship status, and the number of venues and gyms had the lowest significance on crime count.
@@ -1388,179 +590,127 @@ Second, for the regression models, despite the low variance inflation factors of
 ## Table 1. Sample of Dataset - Major Crime Indicators 
 
 
-```{r data-intro-crimes, echo = F}
-crimes %>%
-  head(n = 4) %>%
-  gt() %>%
-  tab_header(
-    title = 'Major Crime Indicators',
-    subtitle = 'Occurrence of Crime from January 2014 to June 2022'
-  ) %>%
-  tab_style(
-    style = cell_borders(
-      sides = 'all',
-      color = "black",
-      weight = px(1.5),
-      style = "solid"
-    ),
-    locations = cells_body(
-      columns = everything(),
-      rows = everything()
-    )
-  ) %>%
-  opt_stylize(style = 6, color = "cyan")
-```
+\begin{longtable}{rllrrllrrlrlrrlrrlrrlrlrl}
+\caption*{
+{\large Major Crime Indicators} \\ 
+{\small Occurrence of Crime from January 2014 to June 2022}
+} \\ 
+\toprule
+X\_id & event\_unique\_id & Division & occurrencedate & reporteddate & location\_type & premises\_type & ucr\_code & ucr\_ext & offence & reportedyear & reportedmonth & reportedday & reporteddayofyear & reporteddayofweek & reportedhour & occurrenceyear & occurrencemonth & occurrenceday & occurrencedayofyear & occurrencedayofweek & occurrencehour & mci\_category & Hood\_ID & Neighbourhood \\ 
+\midrule
+1 & GO-20141273318 & D31 & 2014-01-03 & 2014-01-03 & Apartment (Rooming House, Condo) & Apartment & 1430 & 100 & Assault & 2014 & January & 3 & 3 & Friday     & 11 & 2014 & January & 3 & 3 & Friday     & 11 & Assault & 27 & York University Heights \\ 
+2 & GO-20141274349 & D42 & 2014-01-03 & 2014-01-03 & Single Home, House (Attach Garage, Cottage, Mobile) & House & 2120 & 200 & B\&E & 2014 & January & 3 & 3 & Friday     & 14 & 2014 & January & 3 & 3 & Friday     & 14 & Break and Enter & 132 & Malvern \\ 
+3 & GO-20141274052 & D22 & 2014-01-03 & 2014-01-03 & Open Areas (Lakes, Parks, Rivers) & Outside & 1430 & 100 & Assault & 2014 & January & 3 & 3 & Friday     & 13 & 2014 & January & 3 & 3 & Friday     & 13 & Assault & 19 & Long Branch \\ 
+4 & GO-20141276966 & D53 & 2014-01-03 & 2014-01-03 & Other Commercial / Corporate Places (For Profit, Warehouse, Corp. Bldg & Commercial & 2130 & 210 & Theft Over & 2014 & January & 3 & 3 & Friday     & 13 & 2014 & January & 3 & 3 & Friday     & 12 & Theft Over & 55 & Thorncliffe Park \\ 
+\bottomrule
+\end{longtable}
 
 ## Table 2. Sample of Dataset - Neighbourhood Profiles (Census)
 
 
-```{r data-intro-profiles, echo = F}
-profiles %>%
-  head(n = 4) %>%
-  gt() %>%
-  tab_header(
-    title = 'Neighbourhood Profiles',
-    subtitle = 'Census of Neighbourhoods in 2016'
-  ) %>%
-  tab_style(
-    style = cell_borders(
-      sides = 'all',
-      color = "black",
-      weight = px(1.5),
-      style = "solid"
-    ),
-    locations = cells_body(
-      columns = everything(),
-      rows = everything()
-    )
-  ) %>%
-  opt_stylize(style = 6, color = "cyan")
-```
+\begin{longtable}{rllllrllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll}
+\caption*{
+{\large Neighbourhood Profiles} \\ 
+{\small Census of Neighbourhoods in 2016}
+} \\ 
+\toprule
+X\_id & Category & Topic & Data.Source & Characteristic & City.of.Toronto & Agincourt.North & Agincourt.South.Malvern.West & Alderwood & Annex & Banbury.Don.Mills & Bathurst.Manor & Bay.Street.Corridor & Bayview.Village & Bayview.Woods.Steeles & Bedford.Park.Nortown & Beechborough.Greenbrook & Bendale & Birchcliffe.Cliffside & Black.Creek & Blake.Jones & Briar.Hill.Belgravia & Bridle.Path.Sunnybrook.York.Mills & Broadview.North & Brookhaven.Amesbury & Cabbagetown.South.St..James.Town & Caledonia.Fairbank & Casa.Loma & Centennial.Scarborough & Church.Yonge.Corridor & Clairlea.Birchmount & Clanton.Park & Cliffcrest & Corso.Italia.Davenport & Danforth & Danforth.East.York & Don.Valley.Village & Dorset.Park & Dovercourt.Wallace.Emerson.Junction & Downsview.Roding.CFB & Dufferin.Grove & East.End.Danforth & Edenbridge.Humber.Valley & Eglinton.East & Elms.Old.Rexdale & Englemount.Lawrence & Eringate.Centennial.West.Deane & Etobicoke.West.Mall & Flemingdon.Park & Forest.Hill.North & Forest.Hill.South & Glenfield.Jane.Heights & Greenwood.Coxwell & Guildwood & Henry.Farm & High.Park.North & High.Park.Swansea & Highland.Creek & Hillcrest.Village & Humber.Heights.Westmount & Humber.Summit & Humbermede & Humewood.Cedarvale & Ionview & Islington.City.Centre.West & Junction.Area & Keelesdale.Eglinton.West & Kennedy.Park & Kensington.Chinatown & Kingsview.Village.The.Westway & Kingsway.South & Lambton.Baby.Point & L.Amoreaux & Lansing.Westgate & Lawrence.Park.North & Lawrence.Park.South & Leaside.Bennington & Little.Portugal & Long.Branch & Malvern & Maple.Leaf & Markland.Wood & Milliken & Mimico..includes.Humber.Bay.Shores. & Morningside & Moss.Park & Mount.Dennis & Mount.Olive.Silverstone.Jamestown & Mount.Pleasant.East & Mount.Pleasant.West & New.Toronto & Newtonbrook.East & Newtonbrook.West & Niagara & North.Riverdale & North.St..James.Town & Oakridge & Oakwood.Village & O.Connor.Parkview & Old.East.York & Palmerston.Little.Italy & Parkwoods.Donalda & Pelmo.Park.Humberlea & Playter.Estates.Danforth & Pleasant.View & Princess.Rosethorn & Regent.Park & Rexdale.Kipling & Rockcliffe.Smythe & Roncesvalles & Rosedale.Moore.Park & Rouge & Runnymede.Bloor.West.Village & Rustic & Scarborough.Village & South.Parkdale & South.Riverdale & St.Andrew.Windfields & Steeles & Stonegate.Queensway & Tam.O.Shanter.Sullivan & Taylor.Massey & The.Beaches & Thistletown.Beaumond.Heights & Thorncliffe.Park & Trinity.Bellwoods & University & Victoria.Village & Waterfront.Communities.The.Island & West.Hill & West.Humber.Clairville & Westminster.Branson & Weston & Weston.Pelham.Park & Wexford.Maryvale & Willowdale.East & Willowdale.West & Willowridge.Martingrove.Richview & Woburn & Woodbine.Corridor & Woodbine.Lumsden & Wychwood & Yonge.Eglinton & Yonge.St.Clair & York.University.Heights & Yorkdale.Glen.Park \\ 
+\midrule
+1 & Neighbourhood Information & Neighbourhood Information & City of Toronto & Neighbourhood Number &  & 129 & 128 & 20 & 95 & 42 & 34 & 76 & 52 & 49 & 39 & 112 & 127 & 122 & 24 & 69 & 108 & 41 & 57 & 30 & 71 & 109 & 96 & 133 & 75 & 120 & 33 & 123 & 92 & 66 & 59 & 47 & 126 & 93 & 26 & 83 & 62 & 9 & 138 & 5 & 32 & 11 & 13 & 44 & 102 & 101 & 25 & 65 & 140 & 53 & 88 & 87 & 134 & 48 & 8 & 21 & 22 & 106 & 125 & 14 & 90 & 110 & 124 & 78 & 6 & 15 & 114 & 117 & 38 & 105 & 103 & 56 & 84 & 19 & 132 & 29 & 12 & 130 & 17 & 135 & 73 & 115 & 2 & 99 & 104 & 18 & 50 & 36 & 82 & 68 & 74 & 121 & 107 & 54 & 58 & 80 & 45 & 23 & 67 & 46 & 10 & 72 & 4 & 111 & 86 & 98 & 131 & 89 & 28 & 139 & 85 & 70 & 40 & 116 & 16 & 118 & 61 & 63 & 3 & 55 & 81 & 79 & 43 & 77 & 136 & 1 & 35 & 113 & 91 & 119 & 51 & 37 & 7 & 137 & 64 & 60 & 94 & 100 & 97 & 27 & 31 \\ 
+2 & Neighbourhood Information & Neighbourhood Information & City of Toronto & TSNS2020 Designation &  & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & NIA & No Designation & No Designation & NIA & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & Emerging Neighbourhood & No Designation & NIA & No Designation & No Designation & No Designation & NIA & NIA & Emerging Neighbourhood & No Designation & No Designation & NIA & No Designation & No Designation & NIA & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & Emerging Neighbourhood & NIA & NIA & No Designation & NIA & No Designation & No Designation & NIA & NIA & No Designation & NIA & No Designation & No Designation & Emerging Neighbourhood & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & Emerging Neighbourhood & No Designation & No Designation & No Designation & No Designation & NIA & No Designation & NIA & NIA & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & NIA & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & No Designation & NIA & No Designation & NIA & No Designation & No Designation & No Designation & No Designation & NIA & NIA & NIA & No Designation & No Designation & Emerging Neighbourhood & No Designation & No Designation & NIA & No Designation & NIA & NIA & No Designation & No Designation & NIA & No Designation & NIA & No Designation & Emerging Neighbourhood & NIA & NIA & No Designation & No Designation & No Designation & No Designation & NIA & No Designation & No Designation & No Designation & No Designation & No Designation & NIA & Emerging Neighbourhood \\ 
+3 & Population & Population and dwellings & Census Profile 98-316-X2016001 & Population, 2016 & 2,731,571 & 29,113 & 23,757 & 12,054 & 30,526 & 27,695 & 15,873 & 25,797 & 21,396 & 13,154 & 23,236 & 6,577 & 29,960 & 22,291 & 21,737 & 7,727 & 14,257 & 9,266 & 11,499 & 17,757 & 11,669 & 9,955 & 10,968 & 13,362 & 31,340 & 26,984 & 16,472 & 15,935 & 14,133 & 9,666 & 17,180 & 27,051 & 25,003 & 36,625 & 35,052 & 11,785 & 21,381 & 15,535 & 22,776 & 9,456 & 22,372 & 18,588 & 11,848 & 21,933 & 12,806 & 10,732 & 30,491 & 14,417 & 9,917 & 15,723 & 22,162 & 23,925 & 12,494 & 16,934 & 10,948 & 12,416 & 15,545 & 14,365 & 13,641 & 43,965 & 14,366 & 11,058 & 17,123 & 17,945 & 22,000 & 9,271 & 7,985 & 43,993 & 16,164 & 14,607 & 15,179 & 16,828 & 15,559 & 10,084 & 43,794 & 10,111 & 10,554 & 26,572 & 33,964 & 17,455 & 20,506 & 13,593 & 32,954 & 16,775 & 29,658 & 11,463 & 16,097 & 23,831 & 31,180 & 11,916 & 18,615 & 13,845 & 21,210 & 18,675 & 9,233 & 13,826 & 34,805 & 10,722 & 7,804 & 15,818 & 11,051 & 10,803 & 10,529 & 22,246 & 14,974 & 20,923 & 46,496 & 10,070 & 9,941 & 16,724 & 21,849 & 27,876 & 17,812 & 24,623 & 25,051 & 27,446 & 15,683 & 21,567 & 10,360 & 21,108 & 16,556 & 7,607 & 17,510 & 65,913 & 27,392 & 33,312 & 26,274 & 17,992 & 11,098 & 27,917 & 50,434 & 16,936 & 22,156 & 53,485 & 12,541 & 7,865 & 14,349 & 11,817 & 12,528 & 27,593 & 14,804 \\ 
+4 & Population & Population and dwellings & Census Profile 98-316-X2016001 & Population, 2011 & 2,615,060 & 30,279 & 21,988 & 11,904 & 29,177 & 26,918 & 15,434 & 19,348 & 17,671 & 13,530 & 23,185 & 6,488 & 27,876 & 21,856 & 22,057 & 7,763 & 14,302 & 8,713 & 11,563 & 17,787 & 12,053 & 9,851 & 10,487 & 13,093 & 28,349 & 24,770 & 14,612 & 15,703 & 13,743 & 9,444 & 16,712 & 26,739 & 24,363 & 34,631 & 34,659 & 11,449 & 20,839 & 14,943 & 22,829 & 9,550 & 22,086 & 18,810 & 10,927 & 22,168 & 12,474 & 10,926 & 31,390 & 14,083 & 9,816 & 11,333 & 21,292 & 21,740 & 13,097 & 17,656 & 10,583 & 12,525 & 15,853 & 14,108 & 13,091 & 38,084 & 14,027 & 10,638 & 17,058 & 18,495 & 21,723 & 9,170 & 7,921 & 44,919 & 14,642 & 14,541 & 15,070 & 17,011 & 12,050 & 9,632 & 45,086 & 10,197 & 10,436 & 27,167 & 26,541 & 17,587 & 16,306 & 13,145 & 32,788 & 15,982 & 28,593 & 10,900 & 16,423 & 23,052 & 21,274 & 12,191 & 17,832 & 13,497 & 21,073 & 18,316 & 9,118 & 13,746 & 34,617 & 8,710 & 7,653 & 16,144 & 11,197 & 10,007 & 10,488 & 22,267 & 15,050 & 20,631 & 45,912 & 9,632 & 9,951 & 16,609 & 21,251 & 25,642 & 17,958 & 25,017 & 24,691 & 27,398 & 15,594 & 21,130 & 10,138 & 19,225 & 16,802 & 7,782 & 17,182 & 43,361 & 26,547 & 34,100 & 25,446 & 18,170 & 12,010 & 27,018 & 45,041 & 15,004 & 21,343 & 53,350 & 11,703 & 7,826 & 13,986 & 10,578 & 11,652 & 27,713 & 14,687 \\ 
+\bottomrule
+\end{longtable}
 
 ## Table 3. Sample of Dataset - Airbnb Toronto Data
 
-```{r data-intro-airbnb, echo = F}
-airbnb %>%
-  head(n = 4) %>%
-  gt() %>%
-  tab_header(
-    title = 'Airbnb Toronto Data',
-    subtitle = 'Airbnb Listings in Toronto 2016'
-  ) %>%
-  tab_style(
-    style = cell_borders(
-      sides = 'all',
-      color = "black",
-      weight = px(1.5),
-      style = "solid"
-    ),
-    locations = cells_body(
-      columns = everything(),
-      rows = everything()
-    )
-  ) %>%
-  opt_stylize(style = 6, color = "cyan")
-```
+\begin{longtable}{rllllllrrrlrrrrrlr}
+\caption*{
+{\large Airbnb Toronto Data} \\ 
+{\small Airbnb Listings in Toronto 2016}
+} \\ 
+\toprule
+id & listing\_url & host\_name & neighbourhood & neighbourhood\_cleansed & property\_type & room\_type & price & minimum\_nights & maximum\_nights & has\_availability & availability\_30 & availability\_60 & availability\_90 & availability\_365 & number\_of\_reviews & license & calculated\_host\_listings\_count \\ 
+\midrule
+27640141 & https://www.airbnb.com/rooms/27640141 & Liora & Toronto & Dovercourt-Wallace Emerson-Junction & Entire guest suite & Entire home/apt & 90 & 28 & 1125 & t & 0 & 25 & 55 & 145 & 47 & Unlicensed & 2 \\ 
+27826009 & https://www.airbnb.com/rooms/27826009 & Brianne & Toronto & Waterfront Communities-The Island & Entire condo & Entire home/apt & 130 & 28 & 1125 & t & 0 & 0 & 0 & 0 & 2 & Unlicensed & 1 \\ 
+27647117 & https://www.airbnb.com/rooms/27647117 & Alexandra & Toronto & Playter Estates-Danforth & Entire rental unit & Entire home/apt & 45 & 28 & 30 & t & 0 & 0 & 0 & 0 & 4 & Unlicensed & 1 \\ 
+27647509 & https://www.airbnb.com/rooms/27647509 & Rosana & Toronto & High Park North & Private room in rental unit & Private room & 80 & 28 & 1125 & t & 0 & 0 & 0 & 0 & 9 & Unlicensed & 1 \\ 
+\bottomrule
+\end{longtable}
 
 
 ## Table 4. Sample of Dataset - Toronto Neighbourhoods Information
 
-```{r data-intro-neigh-info, echo = F}
-venues %>%
-  head(n = 4) %>%
-  gt() %>%
-  tab_header(
-    title = 'Toronto Neighbourhoods Information'
-  ) %>%
-  tab_style(
-    style = cell_borders(
-      sides = 'all',
-      color = "black",
-      weight = px(1.5),
-      style = "solid"
-    ),
-    locations = cells_body(
-      columns = everything(),
-      rows = everything()
-    )
-  ) %>%
-  opt_stylize(style = 6, color = "cyan")
-```
+\begin{longtable}{lrrrrlrr}
+\caption*{
+{\large Toronto Neighbourhoods Information}
+} \\ 
+\toprule
+Neighborhood & Total.population & number.of.educated.people & number.of.15.45 & number.of.employers & long\_latt & number\_gyms & number\_venues \\ 
+\midrule
+Agincourt North & 30280 & 19805 & 11850 & 13230 & [-79.2816161258827, 43.797405754163] & 0 & 26 \\ 
+Agincourt South-Malvern West & 21990 & 14535 & 8840 & 9860 & [-79.2891688527481, 43.7851873380096] & 0 & 34 \\ 
+Alderwood & 11900 & 7915 & 4520 & 6240 & [-79.5532040267975, 43.5954996876866] & 1 & 17 \\ 
+Annex & 29180 & 23495 & 15095 & 16770 & [-79.4121466573202, 43.6744312990078] & 3 & 63 \\ 
+\bottomrule
+\end{longtable}
 
 
 ## Table 5. Sample of Cleaned Dataset - Major Crime Indicators
 
 
-```{r crimes-cleaned-sample, echo = F, fig.width=15}
-crimes_cleaned %>%
-  head(n = 4) %>%
-  gt() %>%
-  tab_header(
-    title = 'Major Crime Indicators (2016)',
-    subtitle = 'Occurrence of Crime in 2016'
-  ) %>%
-  tab_style(
-    style = cell_borders(
-      sides = 'all',
-      color = "black",
-      weight = px(1.5),
-      style = "solid"
-    ),
-    locations = cells_body(
-      columns = everything(),
-      rows = everything()
-    )
-  ) %>%
-  opt_stylize(style = 6, color = "cyan")
-```
+\begin{longtable}{rrlllrlrrlrrlrrlrlrl}
+\caption*{
+{\large Major Crime Indicators (2016)} \\ 
+{\small Occurrence of Crime in 2016}
+} \\ 
+\toprule
+occurrencedate & reporteddate & location\_type & premises\_type & offence & reportedyear & reportedmonth & reportedday & reporteddayofyear & reporteddayofweek & reportedhour & occurrenceyear & occurrencemonth & occurrenceday & occurrencedayofyear & occurrencedayofweek & occurrencehour & mci\_category & Hood\_ID & Neighbourhood \\ 
+\midrule
+2016-01-01 & 2016-01-01 & Apartment (Rooming House, Condo) & Apartment & Assault With Weapon & 2016 & January & 1 & 1 & Friday     & 3 & 2016 & January & 1 & 1 & Friday     & 3 & Assault & 70 & South Riverdale \\ 
+2016-01-06 & 2016-01-06 & Single Home, House (Attach Garage, Cottage, Mobile) & House & B\&E & 2016 & January & 6 & 6 & Wednesday  & 13 & 2016 & January & 6 & 6 & Wednesday  & 13 & Break and Enter & 86 & Roncesvalles \\ 
+2016-01-01 & 2016-01-01 & Single Home, House (Attach Garage, Cottage, Mobile) & House & Assault With Weapon & 2016 & January & 1 & 1 & Friday     & 4 & 2016 & January & 1 & 1 & Friday     & 3 & Assault & 31 & Yorkdale-Glen Park \\ 
+2016-01-06 & 2016-01-06 & Streets, Roads, Highways (Bicycle Path, Private Road) & Outside & Robbery - Mugging & 2016 & January & 6 & 6 & Wednesday  & 12 & 2016 & January & 6 & 6 & Wednesday  & 12 & Robbery & 101 & Forest Hill South \\ 
+\bottomrule
+\end{longtable}
 
 ## Table 6. Sample of Cleaned Dataset - Airbnb Toronto Data
 
 
-```{r airbnb-cleaned-sample, echo = F, fig.width=15}
-airbnb_cleaned %>%
-  head(n = 4) %>%
-  gt() %>%
-  tab_header(
-    title = 'Airbnb Toronto Data'
-  ) %>%
-  tab_style(
-    style = cell_borders(
-      sides = 'all',
-      color = "black",
-      weight = px(1.5),
-      style = "solid"
-    ),
-    locations = cells_body(
-      columns = everything(),
-      rows = everything()
-    )
-  ) %>%
-  opt_stylize(style = 6, color = "cyan")
-```
+\begin{longtable}{rllllllrrrlrrrrrlr}
+\caption*{
+{\large Airbnb Toronto Data}
+} \\ 
+\toprule
+id & listing\_url & host\_name & neighbourhood & neighbourhood\_cleansed & property\_type & room\_type & price & minimum\_nights & maximum\_nights & has\_availability & availability\_30 & availability\_60 & availability\_90 & availability\_365 & number\_of\_reviews & license & calculated\_host\_listings\_count \\ 
+\midrule
+27640141 & https://www.airbnb.com/rooms/27640141 & Liora & Toronto & Dovercourt Wallace Emerson Junction & Entire guest suite & Entire home/apt & 90 & 28 & 1125 & t & 0 & 25 & 55 & 145 & 47 & Unlicensed & 2 \\ 
+27826009 & https://www.airbnb.com/rooms/27826009 & Brianne & Toronto & Waterfront Communities The Island & Entire condo & Entire home/apt & 130 & 28 & 1125 & t & 0 & 0 & 0 & 0 & 2 & Unlicensed & 1 \\ 
+27647117 & https://www.airbnb.com/rooms/27647117 & Alexandra & Toronto & Playter Estates Danforth & Entire rental unit & Entire home/apt & 45 & 28 & 30 & t & 0 & 0 & 0 & 0 & 4 & Unlicensed & 1 \\ 
+27647509 & https://www.airbnb.com/rooms/27647509 & Rosana & Toronto & High Park North & Private room in rental unit & Private room & 80 & 28 & 1125 & t & 0 & 0 & 0 & 0 & 9 & Unlicensed & 1 \\ 
+\bottomrule
+\end{longtable}
 
 
 ## Table 7. Sample of Cleaned Dataset - Toronto Neighbourhoods Information
 
 
-```{r venues-cleaned, echo = F, fig.width=15}
-venues_cleaned %>%
-  head(n = 8) %>%
-  gt() %>%
-  tab_header(
-    title = 'Airbnb Toronto Data'
-  ) %>%
-  tab_style(
-    style = cell_borders(
-      sides = 'all',
-      color = "black",
-      weight = px(1.5),
-      style = "solid"
-    ),
-    locations = cells_body(
-      columns = everything(),
-      rows = everything()
-    )
-  ) %>%
-  opt_stylize(style = 6, color = "cyan")
-```
+\begin{longtable}{lrr}
+\caption*{
+{\large Airbnb Toronto Data}
+} \\ 
+\toprule
+Neighbourhood & number\_gyms & number\_venues \\ 
+\midrule
+Agincourt North & 0 & 26 \\ 
+Agincourt South Malvern West & 0 & 34 \\ 
+Alderwood & 1 & 17 \\ 
+Annex & 3 & 63 \\ 
+Banbury Don Mills & 2 & 14 \\ 
+Bathurst Manor & 1 & 26 \\ 
+Bay Street Corridor & 1 & 96 \\ 
+Bayview Village & 3 & 37 \\ 
+\bottomrule
+\end{longtable}
