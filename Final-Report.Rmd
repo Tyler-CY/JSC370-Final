@@ -42,6 +42,14 @@ library(car)
 library(papeR)
 library(rgdal)
 library(htmlwidgets)
+library(MASS)
+library(kableExtra)
+# ML
+# install.packages(c('rpart', 'rpart.plot', 'randomForest', 'gbm'))
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(gbm)
 ```
 
 
@@ -362,7 +370,7 @@ venues_cleaned$Neighborhood[venues_cleaned$Neighborhood == "Cabbagetown-South St
 venues_cleaned$Neighborhood[venues_cleaned$Neighborhood == "Weston-Pelham Park"] <- "Weston-Pellam Park"
 
 venues_cleaned <- venues_cleaned %>%
-  select(Neighborhood, number_gyms, number_venues) %>%
+  dplyr::select(Neighborhood, number_gyms, number_venues) %>%
   mutate(Neighborhood = str_replace_all(Neighborhood, '[-/\\.]', ' ')) 
 
 colnames(venues_cleaned) <- c('Neighbourhood', 'number_gyms', 'number_venues')
@@ -517,6 +525,11 @@ crimes_by_neighbourhood %>%
 
 ```
 
+
+For more exploration on how the MCI offences were distributed in Toronto's neighbourhoods, see the [Interactive Plots](https://tyler-cy.github.io/JSC370-Final/Interactive-Visuals.html).
+
+
+
 ### 2.3.2 Airbnb Listings and MCI Offences
 
 To investigate whether there was a correlation between the number of Airbnb listings and MCI offences, a scatterplot with a best-fitted line was created. The plot suggests that there is a moderate positive relationship between these two numbers. However, the variance of number of offences is much higher when the number of listings are high, which suggests that Airbnb listing was only one of the factors which affected the number of MCI offences. 
@@ -668,7 +681,8 @@ profiles_age_rel <- profiles_age %>%
   setNames(as.vector(.[4, ])) %>%
   filter(!row_number() %in% c(1:5)) %>%
   rownames_to_column(var = 'Neighbourhood') %>%
-  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) 
+  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) %>%
+  mutate_at(2:7, as.numeric)
 
 
   
@@ -721,7 +735,8 @@ profiles_edu_rel <- profiles_education %>%
   setNames(as.vector(.[4, ])) %>%
   filter(!row_number() %in% c(1:5)) %>%
   rownames_to_column(var = 'Neighbourhood') %>%
-  mutate(across(Neighbourhood, str_replace_all, '\\.', ' '))
+  mutate(across(Neighbourhood, str_replace_all, '\\.', ' ')) %>%
+  mutate_at(2:4, as.numeric)
 
 crime_vs_education <- merge(
   x = profiles_edu_rel,
@@ -994,6 +1009,27 @@ crime_vs_income %>%
 ## 2.4 Modelling
 
 
+To investigate which factors have positive effects on crime rate, we trained several models to predict the number of MCI offences (total count) using age, level of education, employment status, immigration and citizenship status, average income tax, number of visible minorities, and population count, and number of airbnbs, gyms and venues.
+
+The baseline models were Poisson regression model and negative binomial regression model. The machine learning models trained were regression tree and random forest.
+
+With only 140 observations corresponding to each neighbourhood, a 80-20 split was used as this ratio gave us enough data for both training and testing.
+
+A data frame with all variables (response and predictors) of interest was created using R's <code>merge</code> function, and new variables were created for regression: for each age group, the ratio between the size of that group and the size of working age group was created (working age group as reference); for each education level, the ratio between the number of people of that level and that of no education was created (non-working as reference); for each work status, similar ratio was created (ratio between the number of people working full-time/part-time and that who did not work); and the proportion of immigrants and visible minority in each neighbourhood was created.
+
+For Poisson regression and negative binomial regression, a model with all the predictors was fitted, and the <code>step</code> function was used to perform backward stepwise regression with Akaike’s Information Criterion (AIC) as the penalty. Afterwards, the variance inflation factors (VIF) were checked using R's <code>vif</code> function, and variables with VIF greater than 10 were removed and the model was refitted. The final Poisson and negative binomial models were used as baselines for comparing the performance against the machine learning models (see below).
+
+
+A regression tree was fitted using the <code>rpart</code> R library. The complexity parameter was chosen to be 0 (which resulted in a smaller number of tree pruning). A variable importance plot was then created to investigate which factors affect the MCI offence counts to the greatest extents. Note that all predictors were used in the regression model, whereas in the Poisson and negative binomial models above, some predictors were removed due to multicollinearity. 
+
+Finally, a random forest was fitted using the <code>randomForest</code> package, which implemented Breiman's random forest algorithm^[https://www.rdocumentation.org/packages/randomForest/versions/4.7-1.1/topics/randomForest]. The number of trees to grow was set to 5000. Similar to the regression tree model, a variable importance plot was created to interpret which predictors were the most significant on crime rate.
+
+
+Although our focus was to investigate which factors affected crime rate the most, the model performances were evaluated using the mean-squared-error statistic: each model was used for prediction on both the training and testing data and the subsequent mean-squared-error for each data set was calculated. For the basic regression models, the AIC and the log-likelihood was also calculated for reference.
+
+
+
+
 ```{r everything, echo = F, include = F}
 VOI <- c('airbnb_count', 'venues_cleaned',  # new data
                 'profiles_age_rel', 'profiles_edu_rel', 'profiles_employment_rel', 'profiles_immigrant_rel',
@@ -1011,18 +1047,316 @@ for (d in VOI){
   )
   
 }
-
+colnames(everything) <- c('neighbourhood', 'id', 'assualt', 'auto_theft', 'break_and_enter', 'robbery', 'theft_over', 'total', 'airbnb', 'gyms', 'venues', 'children', 'youth', 'working_age', 'pre_retirement', 'seniors', 'old_seniors', 'postsecondary', 'no_cert', 'secondary', 'no_work', 'full_time', 'part_time', 'non_immigrants', 'immigrants', 'non-pr', 'income', 'visible_minority', 'non_visible_minority', 'population')
 ```
+
+```{r everything-needed, echo = F, include = F}
+preds <- everything %>%
+  dplyr::select(-c(1:7)) %>%
+  mutate(children_ratio = children/working_age,
+         youth_ratio = youth/working_age,
+         pre_retirement_ratio = pre_retirement/working_age,
+         seniors_ratio = seniors/working_age,
+         postsecondary_ratio = postsecondary/no_cert,
+         secondary_ratio = secondary/no_cert,
+         full_time_ratio = full_time/no_work,
+         part_time_ratio = part_time/no_work,
+         immigrants_ratio = immigrants/non_immigrants,
+         visible_minority_ratio = visible_minority/non_visible_minority) %>%
+  dplyr::select(c(1:4, 23:33))
+
+preds
+```
+
+```{r, echo = F, include = F}
+set.seed(123)
+train_ind <- sample(x = nrow(preds), size = floor(0.8 * nrow(preds)))
+train <- preds[train_ind, ]
+test <- preds[-train_ind, ]
+```
+
 
 # 3. Results
 
+## 3.1 Poisson and Negative Binomial Regression
+
+The final Poisson regression model fitted was created with all predictors with the exception of <code>part_time_ratio</code> (ratio between number of people working part time vs not working) and <code>secondary_ratio</code> (ratio between number of people with secondary level certificate vs no education/certificate). 
+
+```{r poisson, echo = F, include = F}
+pois_full <- glm(formula = total ~ ., family = 'poisson', data = train)
+summary(pois_full)
+vif(pois_full)
+
+pois_backward <- step(pois_full, direction = 'backward', trace = 0)
+summary(pois_backward)
+vif(pois_backward)
+
+pois_part <- glm(formula = total ~ . - part_time_ratio - secondary_ratio, family = 'poisson', data = train)
+summary(pois_part)
+vif(pois_part)
+```
+
+```{r poisson-fig, echo = F, fig.width=18, fig.height=9}
+pois_est <- pois_part %>%
+  tidy() %>%
+  kable(
+    caption = 'Coefficient Estimates of Poisson Regression Model for Estimating MCI Offence Count',
+    col.names = c('Terms', 'Estimate', 'Std. Error', 't-value', 'p-value'),
+    digits = 3
+  ) %>%
+  kable_styling(full_width = FALSE, position = "float_left")
+
+```
+
+
+
+
+```{r negbin, echo = F, include = F}
+negbin_full <- glm.nb(formula = total ~ ., data = train)
+summary(negbin_full)
+vif(negbin_full)
+
+negbin_backward <- step(negbin_full, direction = 'backward', trace = 0)
+summary(negbin_backward)
+vif(negbin_backward)
+
+# negbin_part <- glm.nb(formula = total ~ ., data = train)
+# summary(negbin_part)
+# vif(negbin_part)
+```
+
+```{r nb-fig, echo = F, fig.width=18, fig.height=9}
+negbin_est <- negbin_backward %>%
+  tidy() %>%
+  kable(
+    caption = 'Coefficient Estimates of Negative Binomial Regression Model for Estimating MCI Offence Count',
+    col.names = c('Terms', 'Estimate', 'Std. Error', 't-value', 'p-value'),
+    digits = 3,
+  ) %>%
+  kable_styling(full_width = FALSE, position = "float_right")
+
+```
+
+```{r reg_comparison, echo = F, fig.width=18, fig.height=9}
+kables(list(pois_est, negbin_est)) %>% 
+  kable_styling()
+```
+
+
+The comparison table above shows the coefficient estimates of the predictors selected in the fitted Poisson and negative binomial models. Predictors which appeared in both model had highly similar coefficient estimates. 
+
+In general, age group had the highest impact on the crime rate, as reflected by the large magnitude of estimated coefficients. The ratio of visible to non-visible minorities, the number of venues all had a positive impact on the crime rate. The Poisson model suggested that the number of Airbnbs in the neighbourhood was not a significant factor of MCI offence counts. On the other hand, an increase in the number of gyms, the ratio of people with post-secondary education to one who did not have any certificates/education, and the ratio of immigrants to non-immigrants were all linked with a decrease in crime count, with immigrants playing the most impactful role.
+
+The predictors which was most impactful were the age groups: a one-unit increase in the ratio of the number of youths (15 - 24 years) to the number of working age people (25 - 54 years) had a multiplicative impact of $exp(4) \approx 54$ on the mean crime rate (a 53-times increase), while a one-unit increase in ratio of children (0 - 15 years) and pre-retirement ages (55 - 64 years) was predicted to decrease the mean crime rate by 80% and 95% respectively. The p-values of estimated coefficients of the age group predictors were all very small, which confirmed that the proportion of different age groups had a statistically significant impact on MCI offence counts in neighbourhoods.
+
+
+All predictors in both models, with the exception of the number of venues in the negative binomial model, were all statistically significant at the 5% level.
+
+
+```{r pois-train-mse, echo = F, include = F}
+pois_pred_train <- predict.glm(pois_part, newdata = train, type = 'response')
+data.frame(pois_pred_train, train$total)
+sum((pois_pred_train - train$total)^2) / nrow(train)
+```
+
+```{r pois-test-mse, echo = F, include = F}
+pois_pred_test <- predict(pois_part, test, type = 'response')
+data.frame(pois_pred_test, test$total)
+sum((pois_pred_test - test$total)^2) / nrow(test)
+```
+
+```{r negbin-train-mse, echo = F, include = F}
+negbin_pred_train <- predict(negbin_backward, train, type = 'response')
+data.frame(negbin_pred_train, train$total, (negbin_pred_train - train$total)^2)
+sum((negbin_pred_train - train$total)^2) / nrow(train)
+
+```
+
+```{r negbin-test-mse, echo = F, include = F}
+negbin_pred_test <- predict(negbin_backward, test, type = 'response')
+data.frame(negbin_pred_test, test$total, (negbin_pred_test - test$total)^2)
+sum((negbin_pred_test - test$total)^2) / nrow(test)
+```
+
+
+```{r pois-nb-summary, echo = F}
+pois_pred_train <- predict.glm(pois_part, newdata = train, type = 'response')
+pois_pred_test <- predict(pois_part, test, type = 'response')
+negbin_pred_train <- predict(negbin_backward, train, type = 'response')
+negbin_pred_test <- predict(negbin_backward, test, type = 'response')
+
+pois_summary <- c('Poisson', sum((pois_pred_train - train$total)^2) / nrow(train), sum((pois_pred_test - test$total)^2) / nrow(test), pois_part$aic, pois_part$deviance)
+nb_summary <-c('Negative Binomial', sum((negbin_pred_train - train$total)^2) / nrow(train), sum((negbin_pred_test - test$total)^2) / nrow(test), negbin_backward$aic, negbin_backward$deviance)
+
+pois_nb_summary <- t(data.frame(pois_summary, nb_summary))
+colnames(pois_nb_summary) <- c('Model', 'Train MSE', 'Test MSE', 'AIC', 'Deviance')
+data.frame(pois_nb_summary) %>%
+  mutate_at(2:5, as.numeric) %>%
+  gt() %>%
+  fmt_number(columns = 2:5,
+             decimals = 2,
+             sep_mark = '') %>%
+  tab_header(
+    title = 'Poisson and Negative Binomial Regression Model Statistics'
+  ) %>%
+  tab_style(
+    style = cell_borders(
+      sides = 'all',
+      color = "black",
+      weight = px(1.5),
+      style = "solid"
+    ),
+    locations = cells_body(
+      columns = everything(),
+      rows = everything()
+    )
+  ) %>%
+  opt_stylize(style = 6, color = "cyan")
+
+```
+
+
+The performance of the negative binomial regression model was much better than the Poission regression model. Although the former model had higher training and testing MSEs (12793.42 vs Poisson's 9247.67, 17805.41 vs Poisson's 15630.57), it had much lower AIC (1286.32 vs 4167.50) and deviance (113.71 vs 3349.88). Despite their differences, both models could be adapted as baseline models to evaluate the performance of the advanced machine learning models.
+
+## 3.2 Regression Tree and Random Forest
+
+
+```{r reg-tree, echo = F, fig.height=9, fig.width=18}
+treefit <- rpart(formula = total ~ ., data = train, method = "anova", control = list(cp = 0))
+rpart.plot(treefit, main = 'Fitted Regression Tree Model for Predicting Neighbourhood MCI Offence Count')
+```
+
+```{r random-forest, echo = F, include = F}
+set.seed(123)
+forest <- randomForest(total ~ . , 
+                       data = train,
+                       na.action = na.omit,
+                       ntree = 5000)
+```
+
+
+```{r ml-summary, echo = F}
+tree_pred_test <- predict(treefit, test)
+tree_pred_train <- predict(treefit, train)
+forest_pred_train <- predict(forest, train, type = 'response')
+forest_pred_test <- predict(forest, test, type = 'response')
+
+tree_summary <- c('Regression Tree', sum((tree_pred_train - train$total)^2) / nrow(train), sum((tree_pred_test - test$total)^2) / nrow(test))
+forest_summary <-c('Random Forest', sum((forest_pred_train - train$total)^2) / nrow(train), sum((forest_pred_test - test$total)^2) / nrow(test))
+ml_summary <- t(data.frame(tree_summary, forest_summary))
+colnames(ml_summary) <- c('Model', 'Train MSE', 'Test MSE')
+
+data.frame(ml_summary) %>%
+  mutate_at(2:3, as.numeric) %>%
+  gt() %>%
+  fmt_number(columns = 2:3,
+             decimals = 2,
+             sep_mark = '') %>%
+  tab_header(
+    title = 'Regression Tree and Random Forest Model Statistics'
+  ) %>%
+  tab_style(
+    style = cell_borders(
+      sides = 'all',
+      color = "black",
+      weight = px(1.5),
+      style = "solid"
+    ),
+    locations = cells_body(
+      columns = everything(),
+      rows = everything()
+    )
+  ) %>%
+  opt_stylize(style = 6, color = "cyan")
+
+```
+
+
+The fitted regression tree model with all predictors were simple. The decision nodes were created by only a few predictors of interest: population, the number of Airbnbs, the ratio of people with postsecondary education vs no certificates/education, and the ratio between visible and non-visible minorities. The resulting tree had only 9 leaves, but the training and test mean-squared-error were both similar to the baseline regression models. However, the performance of the random forest was much better than all three model others: it had a training and test MSE of 3113.12 and 10966.88 respectively.
+
+Despite the simplicity of the regression tree, it may be useful to use the model as a guideline to predict the MCI offence counts of a neighbourhood, or as a validation model to validate predictions from other models.
+
+
+
+```{r reg-tree-vip-plot, echo = F, fig.height=9, fig.width=16}
+rt_vip_plot <- data.frame(importance = treefit$variable.importance) %>% 
+  tibble::rownames_to_column() %>% 
+  rename("variable" = rowname) %>% 
+  arrange(importance) %>%
+  mutate(variable = forcats::fct_inorder(variable)) %>%
+  ggplot(aes(x = variable, y = importance)) +
+  geom_bar(stat='identity', width = 0.5) + 
+  coord_flip() +
+  labs(
+    title = 'Variable Importance Plot of Regression Tree Model',
+    x = 'Variable',
+    y = 'Variable Importance'
+  ) +
+  theme(aspect.ratio = 1/2.5,
+        axis.text=element_text(size=14),
+        title = element_text(size=14),
+        legend.text = element_text(size=14)
+  )
+```
+
+```{r random-forest-vip, echo = F, include = F, fig.width = 18, fig.height = 9}
+rf_vip <- varImpPlot(forest)
+
+```
+
+```{r random-forest-vip-plot, echo = F, fig.width = 18, fig.height = 9}
+rf_vip_plot <- data.frame(IncNodePurity = rf_vip) %>% 
+  tibble::rownames_to_column() %>% 
+  rename("variable" = rowname) %>% 
+  arrange(IncNodePurity) %>%
+  mutate(variable = forcats::fct_inorder(variable)) %>%
+  ggplot(aes(x = variable, y = IncNodePurity)) +
+  geom_bar(stat='identity', width = 0.5) + 
+  coord_flip() +
+  labs(
+    title = 'Variable Importance Plot of Random Forest Model',
+    x = 'Variable',
+    y = 'IncNodePurity'
+  ) +
+  theme(aspect.ratio = 1/2.5,
+        axis.text=element_text(size=14),
+        title = element_text(size=14),
+        legend.text = element_text(size=14)
+  )
+```
+
+
+
+```{r vip-plots, echo = F, fig.width = 18, fig.height = 4.5}
+plot_grid(rt_vip_plot, rf_vip_plot, ncol=2, labels = 'Variance Importance Plot of Fitted Regression Tree and Random Forest Models', label_size = 25, label_x = -0.5)
+```
+
+
+In general, both the regression tree and random forest suggested that population and the number of airbnbs were the most important factors of crime count, followed by education, age and work status (with varying importance), then immigration and citizenship status, and the number of venues and gyms had the lowest significance on crime count.
+
+From the variance importance plots, the order of predictors in terms of variable importance were very similar: population was the most important factor, which was not surprising as the crime count should be higher for a larger population. The second most important variable was the number of Airbnbs, which had the about half of the importance of population. What followed were education level (ratio between post-econdary/secondary level education and no certificates), the proportion (ratio) of children and youths in the neighbourhood, and the ratio of visible_minorities vs non-visible minorities. In both models, the number of venues and gyms were some of the variables with the lowest importance. 
+
+
+
+
 # 4. Conclusions and Summary
 
-# 5. Limitations
+In this research study, we aimed to explore the relationship between Toronto's neighbourhood crime rate and the neighbourhood's demographics and the community amenities, and investigated which factors affect crime rate to the greatest extents. Poisson regression, negative binomial regression, regression tree and random forest models were deployed to understand this relationship. The fitted random forest model had the best performance in terms of training and testing mean-squared-error, followed by Poisson regression, negative binomial regression, and regression tree.
 
-# 6. Next Steps
+Our research found out that the population played the largest role on a neighbourhood's crime rate, followed by different age groups: the proportion of youths (15 - 24 years) were correlated with the highest increase in crime, while the proportions of children (0 - 15 years) and pre-retirement-aged people (55 - 64 years) were correlated with the largest drop in crime. The proportions of immigrants and visible minorities were also notable factors of crime, with neigbourhoods of higher proportion of immigrants and lower visible minorities having significantly fewer crime occurred. Moreover, people with post-secondary or secondary education are less likely to commit crime, while an increase in proportion of people with no certificates or education was connected to a higher crime rate.
 
-# 7. References
+Consistent with previous studies, the number of Airbnb's in the area was found to be highly correlated with an increase in crime rate. However, the number of venues (points-of-interests) and gyms did not seem to affect MCI offences in the area, contrary to prior studies which concluded that areas with larger business zonings and more tourists attractions were prone to higher crime rate.
+
+
+# 5. Limitations and Next Steps
+
+There were several limitations in our research study.
+
+First, the small amount of corrupted/mis-placed observations in the "Neighbourhood Profiles" dataset prevented us from using the income groups directly to estimate the effect of average household and individual income on neighbourhood crime rate. Instead, we utilised the average income tax to represent the wealthiness of neighbourhoods. Although income tax was positively correlated with individual and household income, the data come in aggregated form (one number, "average tax income", for each neighbourhood), compared to the exact numbers of individuals/household in each household. This reduced the amount of information we could use and this could affect the final result in our preliminary testing.
+
+Second, for the regression models, despite the low variance inflation factors of the predictors, there might be high correlations between predictors. For example, the proportion of visible minorities in a neighbourhood might be positively correlated with the number of immigrants in the area. Although we removed predictors with high VIFs in the baseline Poisson and negative binomial models, the underlying relationship between predictors still existed. This limitation was hard to remove entirely as statistics in demographic data were usually correlated with one another. In future studies, it might be beneficial to include a wider variety of data (even if demographic in nature) to reduce multicollinearity when fitting a regression model.
+
+# 6. References
 
 1. Foster, S., Giles-Corti, B., & Knuiman, M. (2010). Neighbourhood design and fear of crime: A social-ecological examination of the correlates of residents’ fear in new suburban housing developments. In Health & Place (Vol. 16, Issue 6, pp. 1156–1165). Elsevier BV. https://doi.org/10.1016/j.healthplace.2010.07.007
 
@@ -1046,7 +1380,7 @@ for (d in VOI){
 
 11. Ke, L., O’Brien, D. T., & Heydari, B. (2021, July 14). Airbnb and neighborhood crime: The incursion of tourists or the erosion of local social dynamics? PLOS ONE. Retrieved April 25, 2023, from https://journals.plos.org/plosone/article?id=10.1371%2Fjournal.pone.0253315
 
-# 8. Appendix
+# 7. Appendix
 
 ## Table 1. Sample of Dataset - Major Crime Indicators 
 

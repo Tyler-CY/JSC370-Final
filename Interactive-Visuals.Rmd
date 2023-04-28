@@ -104,7 +104,7 @@ map_crime
 
 # Major Crime Indicator Offences per Day by Type
 
-We also inspected the trend of offence occurrences with respect to time in 2016 with the histogram below. The trend shown in the plot suggests that there were no significant relationship between the day of year and the number of major crime occurred, as the plot appears to be close to a uniform distribution with only minor fluctuations periodically. The spike at Day 0 is due to the fact the some data with missing date were marked with 0, but these were kept in our cleaned data since we cared more about the number of occurrences instead of crimes at a specific date.
+We also inspected the trend of offence occurrences with respect to time in 2016 with the histogram below. The trend shown in the plot suggests that there were no significant relationship between the day of year and the number of major crime occurred, as the plot appears to be close to a uniform distribution with only minor fluctuations periodically, with the exception of Day 1: the spike of assault cases on the first day of the year was interesting yet concerning. This spike does not seem to be from a data collection error, as the dataset had valid information on all the those cases on that day. This number might be related to new years celebration where people usually got drunk and high during celebration events and festivals, hence the increase in assault offences.
 
 ```{r crime-rate-by-time, echo = F, fig.width=12}
 
