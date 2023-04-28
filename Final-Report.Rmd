@@ -53,6 +53,10 @@ library(rpart)
 library(rpart.plot)
 library(randomForest)
 library(gbm)
+
+
+options(knitr.table.format = "latex")
+
 ```
 
 
@@ -1106,9 +1110,12 @@ pois_est <- pois_part %>%
     caption = 'Coefficient Estimates of Poisson Regression Model for Estimating MCI Offence Count',
     col.names = c('Terms', 'Estimate', 'Std. Error', 't-value', 'p-value'),
     digits = 3
-  ) %>%
-  kable_styling(full_width = FALSE, position = "float_left")
+  ) 
 
+# %>%
+#   kable_styling(full_width = FALSE, position = "float_left")
+
+pois_est
 ```
 
 
@@ -1135,14 +1142,17 @@ negbin_est <- negbin_backward %>%
     caption = 'Coefficient Estimates of Negative Binomial Regression Model for Estimating MCI Offence Count',
     col.names = c('Terms', 'Estimate', 'Std. Error', 't-value', 'p-value'),
     digits = 3,
-  ) %>%
-  kable_styling(full_width = FALSE, position = "float_right")
+  ) 
 
+# %>%
+#   kable_styling(full_width = FALSE, position = "float_right")
+
+negbin_est
 ```
 
 ```{r reg_comparison, echo = F, fig.width=18, fig.height=9}
-kables(list(pois_est, negbin_est)) %>% 
-  kable_styling()
+# kables(list(pois_est, negbin_est)) %>% 
+#   kable_styling()
 ```
 
 
