@@ -26,6 +26,3 @@ Based on the "Next Steps" in the Midterm Report, new datasets are included into 
 
 
 [Download Final Report as PDF (Recommended)](https://github.com/Tyler-CY/JSC370-Final/blob/master/Final-Report.pdf)
-
-
-[Download HTML page as PDF](https://github.com/Tyler-CY/JSC370-Final/blob/master/Toronto%20Neighbourhood%20Crime%20HTML%20PDF%20version.pdf)
