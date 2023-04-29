@@ -46,16 +46,13 @@ library(papeR)
 library(rgdal)
 library(htmlwidgets)
 library(MASS)
-library(kableExtra)
+# library(kableExtra)
 # ML
 # install.packages(c('rpart', 'rpart.plot', 'randomForest', 'gbm'))
 library(rpart)
 library(rpart.plot)
 library(randomForest)
 library(gbm)
-
-
-options(knitr.table.format = "latex")
 
 ```
 
@@ -118,14 +115,14 @@ Table 2 in the Appendix below shows the top four rows of the raw data. Descripti
 
 ### 2.1.3 Dataset - Airbnb Toronto Data
 
-This dataset from Kaggle contains over 16000 observations of Airbnb rental listings in Toronto on 4th November 2022. The author collected the data through the [Inside Airbnb](http://insideairbnb.com/get-the-data/) website, which provides quarterly data of Airbnb listings in cities around the world. The dataset was then cleaned by the author such that each listing was located in one of the 140 historical neighbourhoods of Toronto. The variables include the listing's owner, neighbourhood, the price, property and room type etcetera. 
+This dataset from Kaggle contained over 16000 observations of Airbnb rental listings in Toronto (uploaded on 4th November 2022). The author collected the data through the [Inside Airbnb](http://insideairbnb.com/get-the-data/) website, which provided quarterly data of Airbnb listings in cities around the world. The dataset was then cleaned by the author such that each listing was located in one of the 140 historical neighbourhoods of Toronto. The variables include the listing's owner, neighbourhood, the price, property and room type etcetera. 
 
-Although the dataset was collected in 2022, it still provided invaluable insights of the distribution of short term rentals in the city of Toronto, assuming that each region has roughly the same changes in the number of listings over the years. Note that data from previous years were available at a price.
+Although the dataset was collected in 2022, it still provided invaluable insights of the distribution of short term rentals in the city of Toronto, assuming that each region has roughly the same changes in the number of listings over the years. Note that data from previous years were available but required payments.
 
 
 ### 2.1.4 Dataset - Toronto Neighbourhood Information
 
-Similar to our other data sources, the Kaggle author created this dataset in March 2021 by combining data from "Neighbourhood Profiles", "Neighbourhood Crime Rates" from Statistical Canada, and venue information from Foursquare API . The data extracted from the first two sources were heavily cleaned and preprocessed, which did not matter because we already obtained the original datasets from the official sources (as stated above). The only data we were interested in was the gym and venue information data from Foursquare API, which contained the number of gyms and points of interest in each neighbourhood.
+Similar to our other data sources, the Kaggle author created this dataset in March 2021 by combining data from "Neighbourhood Profiles", "Neighbourhood Crime Rates" from Statistical Canada, and venue information from Foursquare API . The data extracted from the first two sources were heavily cleaned and preprocessed, which we did not use because we already obtained the original datasets from the official sources (as stated above). The only data we were interested in was the gym and venue information data from Foursquare API, which contained the number of gyms and points of interest in each neighbourhood.
 
 Although this dataset was collected after 2016, it was still important to our research as the number of venues and points of interests should roughly remain the same throughout these years.
 
@@ -349,7 +346,7 @@ profiles_wanted_features  %>%
 
 ### 2.2.3 Cleaning of "Airbnb Toronto Data"
 
-The dataset was already cleaned by the maker. However, although the variable is named <code>neighbourhood_cleansed</code>, some neighbourhood names were not standardized. Thus, we manually cleaned the neighbourhood names so that they match with the <Neighbourhood> column in the datasets from the Toronto Data Portal. For example, <code>Mimico (includes Humber Bay Shores)</code> was changed to <code>Mimico</code>.
+The dataset was already cleaned by the author. However, although the variable is named <code>neighbourhood_cleansed</code>, some neighbourhood names were not standardized. Thus, we manually cleaned the neighbourhood names so that they match with the <Neighbourhood> column in the datasets from the Toronto Data Portal. For example, <code>Mimico (includes Humber Bay Shores)</code> was changed to <code>Mimico</code>.
 
 ```{r airbnb-cleaned, echo = F, include = F}
 airbnb_cleaned <- airbnb
@@ -539,7 +536,7 @@ For more exploration on how the MCI offences were distributed in Toronto's neigh
 
 ### 2.3.2 Airbnb Listings and MCI Offences
 
-To investigate whether there was a correlation between the number of Airbnb listings and MCI offences, a scatterplot with a best-fitted line was created. The plot suggests that there is a moderate positive relationship between these two numbers. However, the variance of number of offences is much higher when the number of listings are high, which suggests that Airbnb listing was only one of the factors which affected the number of MCI offences. 
+To investigate whether there was a correlation between the number of Airbnb listings and MCI offences, a scatterplot with a best-fitted line was created. The plot suggested that there was a moderate positive relationship between these two numbers. However, the variance of number of offences was much higher when the number of listings were high, which suggested that Airbnb listing was only one of the factors which affected the number of MCI offences. 
 
 Note that Waterfront Communities-The Island with 2754 listings and 1241 offences was omitted in the plot for aesthetic purposes. 
 
@@ -575,7 +572,7 @@ airbnb_vs_crimes %>%
     title = 'Number of Airbnb Listings vs Number of Crime Offences by Neighbourhood in Toronto (2016)\n',
     x = 'Number of Airbnb Listings',
     y = 'Number of Crime Offences',
-    caption = 'The scatterplot shows how the number of airbnb listings affect the number of crime offences.\nThe plot suggests there is a positive correlation between these two numbers.\nNote that Waterfront Communities-The Island with 2754 listings and 1241 offences were omitted for aesthetic purposes.'
+    caption = 'The scatterplot shows how the number of airbnb listings affected the number of crime offences.\nThe plot suggests there was a positive correlation between these two numbers.\nNote that Waterfront Communities-The Island with 2754 listings and 1241 offences was omitted for aesthetic purposes.'
   ) +
   theme(axis.text=element_text(size=14),
         title = element_text(size=20),
@@ -587,7 +584,7 @@ airbnb_vs_crimes %>%
 ### 2.3.3 Venues (POIs), Gyms, and MCI Offences
 
 
-Next, we investigated if the number of MCI offences were related to the number of venues (POIs) and gyms by plotting a scatterplot with a best-fitted line. There is only a very weak positive relationship between these two factors, if not none at all. However, the plot shows that some outliers with high number of MCI offences occurred in neighbourhoods with the highest venues and gyms.
+Next, we investigated if the number of MCI offences were related to the number of venues (POIs) and gyms by plotting a scatterplot with a best-fitted line. There was only a very weak positive relationship between these two factors, if not none at all. However, the plot shows that some outliers with high number of MCI offences occurred in neighbourhoods with the highest venues and gyms.
 
 
 ```{r venues_count, echo = F, message = F, warning=F, fig.height=9, fig.width=18}
@@ -610,7 +607,7 @@ venues_vs_crimes %>%
     title = 'Number of POIs and Gyms vs Number of Crime Offences by Neighbourhood in Toronto (2016)\n',
     x = 'Number of Points of Interests and Gyms',
     y = 'Number of Crime Offences',
-    caption = 'The scatterplot shows how the number of POIs and gyms affect the number of crime offences.\nThe plot suggests there is a very weak correlation between these two numbers, if not none at all.'
+    caption = 'The scatterplot shows how the number of POIs and gyms affected the number of crime offences.\nThe plot suggests there is a very weak correlation between these two numbers, if not none at all.'
   ) +
   theme(axis.text=element_text(size=14),
         title = element_text(size=20),
@@ -1016,23 +1013,23 @@ crime_vs_income %>%
 ## 2.4 Modelling
 
 
-To investigate which factors have positive effects on crime rate, we trained several models to predict the number of MCI offences (total count) using age, level of education, employment status, immigration and citizenship status, average income tax, number of visible minorities, and population count, and number of airbnbs, gyms and venues.
+To investigate how much the factors had effects on crime rate, we trained several models to predict the number of MCI offences (total count) using age, level of education, employment status, immigration and citizenship status, average income tax, number of visible minorities, and population count, and number of airbnbs, gyms and venues.
 
 The baseline models were Poisson regression model and negative binomial regression model. The machine learning models trained were regression tree and random forest.
 
-With only 140 observations corresponding to each neighbourhood, a 80-20 split was used as this ratio gave us enough data for both training and testing.
+With only 140 observations corresponding to the 140 neighbourhoods, a 80-20 split was used as this ratio gave us enough data for both training and testing.
 
-A data frame with all variables (response and predictors) of interest was created using R's <code>merge</code> function, and new variables were created for regression: for each age group, the ratio between the size of that group and the size of working age group was created (working age group as reference); for each education level, the ratio between the number of people of that level and that of no education was created (non-working as reference); for each work status, similar ratio was created (ratio between the number of people working full-time/part-time and that who did not work); and the proportion of immigrants and visible minority in each neighbourhood was created.
+A data frame with all variables of interest (response and predictors) was created using R's <code>merge</code> function, and new variables were created for regression: for each age group, the ratio between the size of that group and the size of working age group was created (working age group as reference); for each education level, the ratio between the number of people of that level and that of no education was created (non-working as reference); for each work status, similar ratio was created (ratio between the number of people working full-time/part-time and that who did not work); and the proportions of immigrants and visible minorities in each neighbourhood were created.
 
-For Poisson regression and negative binomial regression, a model with all the predictors was fitted, and the <code>step</code> function was used to perform backward stepwise regression with Akaike’s Information Criterion (AIC) as the penalty. Afterwards, the variance inflation factors (VIF) were checked using R's <code>vif</code> function, and variables with VIF greater than 10 were removed and the model was refitted. The final Poisson and negative binomial models were used as baselines for comparing the performance against the machine learning models (see below).
+For Poisson regression and negative binomial regression, each had a model with all the predictors fitted, and the <code>step</code> function was used to perform backward stepwise regression with Akaike’s Information Criterion (AIC) as the penalty. Afterwards, the variance inflation factors (VIF) of each remaining predictors were checked using R's <code>vif</code> function, and variables with VIF greater than 10 were removed and the model was refitted and rechecked. The final Poisson and negative binomial models were used as baselines for performance comparison against the machine learning models.
 
 
-A regression tree was fitted using the <code>rpart</code> R library. The complexity parameter was chosen to be 0 (which resulted in a smaller number of tree pruning). A variable importance plot was then created to investigate which factors affect the MCI offence counts to the greatest extents. Note that all predictors were used in the regression model, whereas in the Poisson and negative binomial models above, some predictors were removed due to multicollinearity. 
+A regression tree was fitted using the <code>rpart</code> R library. The complexity parameter was chosen to be 0 (which resulted in the least amount of tree pruning). A variable importance plot was then created to investigate which factors affected the MCI offence counts to the greatest extents. Note that all predictors were used in the regression model, whereas in the Poisson and negative binomial models, some predictors were removed due to multicollinearity and/or insignificance in the stepwise regression. 
 
 Finally, a random forest was fitted using the <code>randomForest</code> package, which implemented Breiman's random forest algorithm^[https://www.rdocumentation.org/packages/randomForest/versions/4.7-1.1/topics/randomForest]. The number of trees to grow was set to 5000. Similar to the regression tree model, a variable importance plot was created to interpret which predictors were the most significant on crime rate.
 
 
-Although our focus was to investigate which factors affected crime rate the most, the model performances were evaluated using the mean-squared-error statistic: each model was used for prediction on both the training and testing data and the subsequent mean-squared-error for each data set was calculated. For the basic regression models, the AIC and the log-likelihood was also calculated for reference.
+Although our focus was to investigate which factors affected crime rate the most, the model performances were evaluated using the mean-squared-error statistic: each model was used for prediction on both the training and testing data and the subsequent mean-squared-error for each data set was calculated. For the basic regression models, the AIC and the log-likelihood values were also calculated for reference.
 
 
 
@@ -1142,28 +1139,28 @@ negbin_est <- negbin_backward %>%
     caption = 'Coefficient Estimates of Negative Binomial Regression Model for Estimating MCI Offence Count',
     col.names = c('Terms', 'Estimate', 'Std. Error', 't-value', 'p-value'),
     digits = 3,
-  ) 
+  )  
 
 # %>%
-#   kable_styling(full_width = FALSE, position = "float_right")
+#    kable_styling(full_width = FALSE, position = "float_right")
 
 negbin_est
 ```
 
 ```{r reg_comparison, echo = F, fig.width=18, fig.height=9}
-# kables(list(pois_est, negbin_est)) %>% 
+# kables(list(pois_est, negbin_est)) %>%
 #   kable_styling()
 ```
 
 
-The comparison table above shows the coefficient estimates of the predictors selected in the fitted Poisson and negative binomial models. Predictors which appeared in both model had highly similar coefficient estimates. 
+The tables above show the coefficient estimates of the predictors selected in the fitted Poisson and negative binomial models. Predictors which appeared in both model had highly similar coefficient estimates. All predictors in both models, with the exception of the number of venues in the negative binomial model, were all statistically significant at the 5% level.
 
-In general, age group had the highest impact on the crime rate, as reflected by the large magnitude of estimated coefficients. The ratio of visible to non-visible minorities, the number of venues all had a positive impact on the crime rate. The Poisson model suggested that the number of Airbnbs in the neighbourhood was not a significant factor of MCI offence counts. On the other hand, an increase in the number of gyms, the ratio of people with post-secondary education to one who did not have any certificates/education, and the ratio of immigrants to non-immigrants were all linked with a decrease in crime count, with immigrants playing the most impactful role.
+In summary, age group had the highest impact on the crime rate, as reflected by the large magnitude of estimated coefficients. The ratio of visible to non-visible minorities, the number of venues all had positive impacts on the crime rate. The Poisson model suggested that the number of Airbnbs in the neighbourhood was not a significant factor of MCI offence counts. On the other hand, an increase in the number of gyms, the ratio of people with post-secondary education to one who did not have any certificates/education, and the ratio of immigrants to non-immigrants, were all linked with a decrease in crime count, with immigrants having the most impactful role.
 
-The predictors which was most impactful were the age groups: a one-unit increase in the ratio of the number of youths (15 - 24 years) to the number of working age people (25 - 54 years) had a multiplicative impact of 54 on the mean crime rate (a 53-times increase), while a one-unit increase in ratio of children (0 - 15 years) and pre-retirement ages (55 - 64 years) was predicted to decrease the mean crime rate by 80% and 95% respectively. The p-values of estimated coefficients of the age group predictors were all very small, which confirmed that the proportion of different age groups had a statistically significant impact on MCI offence counts in neighbourhoods.
+The estimated coefficients of the age groups were interesting: a one-unit increase in the ratio of the number of youths (15 - 24 years) to the number of working age people (25 - 54 years) had a multiplicative impact of 54 on the mean crime rate (a 53-times increase), while a one-unit increase in ratio of children (0 - 15 years) or pre-retirement ages (55 - 64 years) was predicted to decrease the mean crime rate by 80% and 95% respectively. The p-values of estimated coefficients of the age group predictors were all very small, which confirmed that the proportions of different age groups had a statistically significant impact on MCI offence counts in neighbourhoods.
 
 
-All predictors in both models, with the exception of the number of venues in the negative binomial model, were all statistically significant at the 5% level.
+
 
 
 ```{r pois-train-mse, echo = F, include = F}
@@ -1229,7 +1226,7 @@ data.frame(pois_nb_summary) %>%
 ```
 
 
-The performance of the negative binomial regression model was much better than the Poission regression model. Although the former model had higher training and testing MSEs (12793.42 vs Poisson's 9247.67, 17805.41 vs Poisson's 15630.57), it had much lower AIC (1286.32 vs 4167.50) and deviance (113.71 vs 3349.88). Despite their differences, both models could be adapted as baseline models to evaluate the performance of the advanced machine learning models.
+The performance of the negative binomial regression model was much better than the Poission regression model. Although the former model had higher training and testing MSEs (12793.42 vs Poisson's 9247.67, 17805.41 vs Poisson's 15630.57), it had much lower AIC (1286.32 vs 4167.50) and deviance (113.71 vs 3349.88). Despite their differences, both models could be adapted as baseline models to evaluate the performances of the advanced machine learning models.
 
 ## 3.2 Regression Tree and Random Forest
 
@@ -1287,7 +1284,7 @@ data.frame(ml_summary) %>%
 
 The fitted regression tree model with all predictors were simple. The decision nodes were created by only a few predictors of interest: population, the number of Airbnbs, the ratio of people with postsecondary education vs no certificates/education, and the ratio between visible and non-visible minorities. The resulting tree had only 9 leaves, but the training and test mean-squared-error were both similar to the baseline regression models. However, the performance of the random forest was much better than all three model others: it had a training and test MSE of 3113.12 and 10966.88 respectively.
 
-Despite the simplicity of the regression tree, it may be useful to use the model as a guideline to predict the MCI offence counts of a neighbourhood, or as a validation model to validate predictions from other models.
+Despite the simplicity of the regression tree, it may be useful to use the model as a guideline to predict the MCI offence counts of a neighbourhood, or as a validation model to validate predictions from other models. However, it is not advisable to use the regression tree as a prediction model: the low number of leaves means the predicted values could be far from the true values.
 
 
 
@@ -1350,13 +1347,16 @@ In general, both the regression tree and random forest suggested that population
 From the variance importance plots, the order of predictors in terms of variable importance were very similar: population was the most important factor, which was not surprising as the crime count should be higher for a larger population. The second most important variable was the number of Airbnbs, which had the about half of the importance of population. What followed were education level (ratio between post-econdary/secondary level education and no certificates), the proportion (ratio) of children and youths in the neighbourhood, and the ratio of visible_minorities vs non-visible minorities. In both models, the number of venues and gyms were some of the variables with the lowest importance. 
 
 
+All four models suggested that age groups indeed had the most significant impact on crime rate. However, the number of Airbnbs had much higher significance (in terms of impact, not in the sense of p-value) in the fitted regression tree and random forest model, but not the regression baseline models. Nonetheless, all four models were similar in terms of variable (predictor) importances.
+
+
 
 
 # 4. Conclusions and Summary
 
-In this research study, we aimed to explore the relationship between Toronto's neighbourhood crime rate and the neighbourhood's demographics and the community amenities, and investigated which factors affect crime rate to the greatest extents. Poisson regression, negative binomial regression, regression tree and random forest models were deployed to understand this relationship. The fitted random forest model had the best performance in terms of training and testing mean-squared-error, followed by Poisson regression, negative binomial regression, and regression tree.
+In this research study, we aimed to explore the relationship between Toronto's neighbourhood crime rate and the neighbourhood's demographics and the community amenities, and investigated which factors affected crime rate to the greatest extents. Poisson regression, negative binomial regression, regression tree and random forest models were deployed to understand this relationship. The fitted random forest model had the best performance in terms of training and testing mean-squared-error, followed by Poisson regression, negative binomial regression, and regression tree.
 
-Our research found out that the population played the largest role on a neighbourhood's crime rate, followed by different age groups: the proportion of youths (15 - 24 years) were correlated with the highest increase in crime, while the proportions of children (0 - 15 years) and pre-retirement-aged people (55 - 64 years) were correlated with the largest drop in crime. The proportions of immigrants and visible minorities were also notable factors of crime, with neigbourhoods of higher proportion of immigrants and lower visible minorities having significantly fewer crime occurred. Moreover, people with post-secondary or secondary education are less likely to commit crime, while an increase in proportion of people with no certificates or education was connected to a higher crime rate.
+Our research found out that the population played the largest role on a neighbourhood's crime rate, followed by different age groups: the proportion of youths (15 - 24 years) were correlated with the highest increase in crime, while the proportions of children (0 - 15 years) and pre-retirement-aged people (55 - 64 years) were correlated with the largest drop in crime. The proportions of immigrants and visible minorities were also notable factors of crime, with neigbourhoods having higher proportion of immigrants and lower proportion of visible minorities having significantly fewer crime occurred. Moreover, people with post-secondary or secondary education are less likely to commit crime, while an increase in proportion of people with no certificates or education was connected to a higher crime rate.
 
 Consistent with previous studies, the number of Airbnb's in the area was found to be highly correlated with an increase in crime rate. However, the number of venues (points-of-interests) and gyms did not seem to affect MCI offences in the area, contrary to prior studies which concluded that areas with larger business zonings and more tourists attractions were prone to higher crime rate.
 

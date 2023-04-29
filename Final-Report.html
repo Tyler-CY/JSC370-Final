@@ -36,8 +36,6 @@
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
-<script src="site_libs/kePrint-0.0.1/kePrint.js"></script>
-<link href="site_libs/lightable-0.0.1/lightable.css" rel="stylesheet" />
 
 <style type="text/css">
   code{white-space: pre-wrap;}
@@ -500,11 +498,11 @@ Cleaning” section below.</p>
 </div>
 <div id="dataset---airbnb-toronto-data" class="section level3">
 <h3>2.1.3 Dataset - Airbnb Toronto Data</h3>
-<p>This dataset from Kaggle contains over 16000 observations of Airbnb
-rental listings in Toronto on 4th November 2022. The author collected
-the data through the <a
+<p>This dataset from Kaggle contained over 16000 observations of Airbnb
+rental listings in Toronto (uploaded on 4th November 2022). The author
+collected the data through the <a
 href="http://insideairbnb.com/get-the-data/">Inside Airbnb</a> website,
-which provides quarterly data of Airbnb listings in cities around the
+which provided quarterly data of Airbnb listings in cities around the
 world. The dataset was then cleaned by the author such that each listing
 was located in one of the 140 historical neighbourhoods of Toronto. The
 variables include the listing’s owner, neighbourhood, the price,
@@ -513,7 +511,7 @@ property and room type etcetera.</p>
 invaluable insights of the distribution of short term rentals in the
 city of Toronto, assuming that each region has roughly the same changes
 in the number of listings over the years. Note that data from previous
-years were available at a price.</p>
+years were available but required payments.</p>
 </div>
 <div id="dataset---toronto-neighbourhood-information"
 class="section level3">
@@ -522,7 +520,7 @@ class="section level3">
 dataset in March 2021 by combining data from “Neighbourhood Profiles”,
 “Neighbourhood Crime Rates” from Statistical Canada, and venue
 information from Foursquare API . The data extracted from the first two
-sources were heavily cleaned and preprocessed, which did not matter
+sources were heavily cleaned and preprocessed, which we did not use
 because we already obtained the original datasets from the official
 sources (as stated above). The only data we were interested in was the
 gym and venue information data from Foursquare API, which contained the
@@ -595,7 +593,7 @@ study.</p>
 </div>
 <div id="cleaning-of-airbnb-toronto-data" class="section level3">
 <h3>2.2.3 Cleaning of “Airbnb Toronto Data”</h3>
-<p>The dataset was already cleaned by the maker. However, although the
+<p>The dataset was already cleaned by the author. However, although the
 variable is named <code>neighbourhood_cleansed</code>, some
 neighbourhood names were not standardized. Thus, we manually cleaned the
 neighbourhood names so that they match with the <Neighbourhood> column
@@ -682,10 +680,10 @@ Plots</a>.</p>
 <h3>2.3.2 Airbnb Listings and MCI Offences</h3>
 <p>To investigate whether there was a correlation between the number of
 Airbnb listings and MCI offences, a scatterplot with a best-fitted line
-was created. The plot suggests that there is a moderate positive
+was created. The plot suggested that there was a moderate positive
 relationship between these two numbers. However, the variance of number
-of offences is much higher when the number of listings are high, which
-suggests that Airbnb listing was only one of the factors which affected
+of offences was much higher when the number of listings were high, which
+suggested that Airbnb listing was only one of the factors which affected
 the number of MCI offences.</p>
 <p>Note that Waterfront Communities-The Island with 2754 listings and
 1241 offences was omitted in the plot for aesthetic purposes.</p>
@@ -695,7 +693,7 @@ the number of MCI offences.</p>
 <h3>2.3.3 Venues (POIs), Gyms, and MCI Offences</h3>
 <p>Next, we investigated if the number of MCI offences were related to
 the number of venues (POIs) and gyms by plotting a scatterplot with a
-best-fitted line. There is only a very weak positive relationship
+best-fitted line. There was only a very weak positive relationship
 between these two factors, if not none at all. However, the plot shows
 that some outliers with high number of MCI offences occurred in
 neighbourhoods with the highest venues and gyms.</p>
@@ -750,114 +748,59 @@ slightly. This strongly suggested that there were other factors which
 affect crime rate, and the p-values show that age group is one of the
 significant factors.</p>
 <table>
-<caption>
-Coefficient Estimates of a Linear Regression Model for Estimating MCI
-Offence Count (Age Groups)
-</caption>
+<caption>Coefficient Estimates of a Linear Regression Model for
+Estimating MCI Offence Count (Age Groups)</caption>
+<colgroup>
+<col width="46%" />
+<col width="13%" />
+<col width="16%" />
+<col width="11%" />
+<col width="11%" />
+</colgroup>
 <thead>
-<tr>
-<th style="text-align:left;">
-Terms
-</th>
-<th style="text-align:right;">
-Estimate
-</th>
-<th style="text-align:right;">
-Std. Error
-</th>
-<th style="text-align:right;">
-t-value
-</th>
-<th style="text-align:right;">
-p-value
-</th>
+<tr class="header">
+<th align="left">Terms</th>
+<th align="right">Estimate</th>
+<th align="right">Std. Error</th>
+<th align="right">t-value</th>
+<th align="right">p-value</th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td style="text-align:left;">
-(Intercept)
-</td>
-<td style="text-align:right;">
-57.993
-</td>
-<td style="text-align:right;">
-21.730
-</td>
-<td style="text-align:right;">
-2.669
-</td>
-<td style="text-align:right;">
-0.009
-</td>
+<tr class="odd">
+<td align="left">(Intercept)</td>
+<td align="right">57.993</td>
+<td align="right">21.730</td>
+<td align="right">2.669</td>
+<td align="right">0.009</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-<code>Children (0-14 years)</code>
-</td>
-<td style="text-align:right;">
--0.032
-</td>
-<td style="text-align:right;">
-0.012
-</td>
-<td style="text-align:right;">
--2.660
-</td>
-<td style="text-align:right;">
-0.009
-</td>
+<tr class="even">
+<td align="left"><code>Children (0-14 years)</code></td>
+<td align="right">-0.032</td>
+<td align="right">0.012</td>
+<td align="right">-2.660</td>
+<td align="right">0.009</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-<code>Youth (15-24 years)</code>
-</td>
-<td style="text-align:right;">
-0.125
-</td>
-<td style="text-align:right;">
-0.015
-</td>
-<td style="text-align:right;">
-8.320
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="odd">
+<td align="left"><code>Youth (15-24 years)</code></td>
+<td align="right">0.125</td>
+<td align="right">0.015</td>
+<td align="right">8.320</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-<code>Working Age (25-54 years)</code>
-</td>
-<td style="text-align:right;">
-0.014
-</td>
-<td style="text-align:right;">
-0.003
-</td>
-<td style="text-align:right;">
-4.286
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="even">
+<td align="left"><code>Working Age (25-54 years)</code></td>
+<td align="right">0.014</td>
+<td align="right">0.003</td>
+<td align="right">4.286</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-<code>Pre-retirement (55-64 years)</code>
-</td>
-<td style="text-align:right;">
--0.065
-</td>
-<td style="text-align:right;">
-0.019
-</td>
-<td style="text-align:right;">
--3.351
-</td>
-<td style="text-align:right;">
-0.001
-</td>
+<tr class="odd">
+<td align="left"><code>Pre-retirement (55-64 years)</code></td>
+<td align="right">-0.065</td>
+<td align="right">0.019</td>
+<td align="right">-3.351</td>
+<td align="right">0.001</td>
 </tr>
 </tbody>
 </table>
@@ -882,80 +825,47 @@ factor on crime rate alone, so it might be useful to combine education
 with other variables and check if the combinations affect crime rate
 altogether.</p>
 <table>
-<caption>
-Coefficient Estimates of a Linear Regression Model for Estimating MCI
-Offence Count (Education)
-</caption>
+<caption>Coefficient Estimates of a Linear Regression Model for
+Estimating MCI Offence Count (Education)</caption>
+<colgroup>
+<col width="63%" />
+<col width="9%" />
+<col width="11%" />
+<col width="8%" />
+<col width="8%" />
+</colgroup>
 <thead>
-<tr>
-<th style="text-align:left;">
-Terms
-</th>
-<th style="text-align:right;">
-Estimate
-</th>
-<th style="text-align:right;">
-Std. Error
-</th>
-<th style="text-align:right;">
-t-value
-</th>
-<th style="text-align:right;">
-p-value
-</th>
+<tr class="header">
+<th align="left">Terms</th>
+<th align="right">Estimate</th>
+<th align="right">Std. Error</th>
+<th align="right">t-value</th>
+<th align="right">p-value</th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td style="text-align:left;">
-(Intercept)
-</td>
-<td style="text-align:right;">
--581.034
-</td>
-<td style="text-align:right;">
-256.482
-</td>
-<td style="text-align:right;">
--2.265
-</td>
-<td style="text-align:right;">
-0.025
-</td>
+<tr class="odd">
+<td align="left">(Intercept)</td>
+<td align="right">-581.034</td>
+<td align="right">256.482</td>
+<td align="right">-2.265</td>
+<td align="right">0.025</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-<code>Postsecondary certificate, diploma or degree</code>
-</td>
-<td style="text-align:right;">
-708.739
-</td>
-<td style="text-align:right;">
-250.138
-</td>
-<td style="text-align:right;">
-2.833
-</td>
-<td style="text-align:right;">
-0.005
-</td>
+<tr class="even">
+<td
+align="left"><code>Postsecondary certificate, diploma or degree</code></td>
+<td align="right">708.739</td>
+<td align="right">250.138</td>
+<td align="right">2.833</td>
+<td align="right">0.005</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-<code>Secondary (high) school diploma or equivalency certificate</code>
-</td>
-<td style="text-align:right;">
-2299.184
-</td>
-<td style="text-align:right;">
-711.735
-</td>
-<td style="text-align:right;">
-3.230
-</td>
-<td style="text-align:right;">
-0.002
-</td>
+<tr class="odd">
+<td
+align="left"><code>Secondary (high) school diploma or equivalency certificate</code></td>
+<td align="right">2299.184</td>
+<td align="right">711.735</td>
+<td align="right">3.230</td>
+<td align="right">0.002</td>
 </tr>
 </tbody>
 </table>
@@ -971,63 +881,31 @@ that unemployment rate was positively correlated with crime rate
 id="fnref13"><sup>13</sup></a>, John Howard Society of Ontario 2009<a
 href="#fn14" class="footnote-ref" id="fnref14"><sup>14</sup></a>).</p>
 <table>
-<caption>
-Coefficient Estimates of a Linear Regression Model for Estimating MCI
-Offence Count (Employment Status)
-</caption>
+<caption>Coefficient Estimates of a Linear Regression Model for
+Estimating MCI Offence Count (Employment Status)</caption>
 <thead>
-<tr>
-<th style="text-align:left;">
-Terms
-</th>
-<th style="text-align:right;">
-Estimate
-</th>
-<th style="text-align:right;">
-Std. Error
-</th>
-<th style="text-align:right;">
-t-value
-</th>
-<th style="text-align:right;">
-p-value
-</th>
+<tr class="header">
+<th align="left">Terms</th>
+<th align="right">Estimate</th>
+<th align="right">Std. Error</th>
+<th align="right">t-value</th>
+<th align="right">p-value</th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td style="text-align:left;">
-(Intercept)
-</td>
-<td style="text-align:right;">
-57.258
-</td>
-<td style="text-align:right;">
-28.187
-</td>
-<td style="text-align:right;">
-2.031
-</td>
-<td style="text-align:right;">
-0.044
-</td>
+<tr class="odd">
+<td align="left">(Intercept)</td>
+<td align="right">57.258</td>
+<td align="right">28.187</td>
+<td align="right">2.031</td>
+<td align="right">0.044</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-<code>Did not work</code>
-</td>
-<td style="text-align:right;">
-0.032
-</td>
-<td style="text-align:right;">
-0.004
-</td>
-<td style="text-align:right;">
-7.282
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="even">
+<td align="left"><code>Did not work</code></td>
+<td align="right">0.032</td>
+<td align="right">0.004</td>
+<td align="right">7.282</td>
+<td align="right">0.000</td>
 </tr>
 </tbody>
 </table>
@@ -1047,63 +925,31 @@ which concluded that the number of immigrants
 (statistically-)significantly reduced the number of crimes in the area<a
 href="#fn15" class="footnote-ref" id="fnref15"><sup>15</sup></a>.</p>
 <table>
-<caption>
-Coefficient Estimates of a Linear Regression Model for Estimating MCI
-Offence Count (Employment Status)
-</caption>
+<caption>Coefficient Estimates of a Linear Regression Model for
+Estimating MCI Offence Count (Employment Status)</caption>
 <thead>
-<tr>
-<th style="text-align:left;">
-Terms
-</th>
-<th style="text-align:right;">
-Estimate
-</th>
-<th style="text-align:right;">
-Std. Error
-</th>
-<th style="text-align:right;">
-t-value
-</th>
-<th style="text-align:right;">
-p-value
-</th>
+<tr class="header">
+<th align="left">Terms</th>
+<th align="right">Estimate</th>
+<th align="right">Std. Error</th>
+<th align="right">t-value</th>
+<th align="right">p-value</th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td style="text-align:left;">
-(Intercept)
-</td>
-<td style="text-align:right;">
-378.555
-</td>
-<td style="text-align:right;">
-59.861
-</td>
-<td style="text-align:right;">
-6.324
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="odd">
+<td align="left">(Intercept)</td>
+<td align="right">378.555</td>
+<td align="right">59.861</td>
+<td align="right">6.324</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-Immigration_Rate
-</td>
-<td style="text-align:right;">
--278.403
-</td>
-<td style="text-align:right;">
-112.786
-</td>
-<td style="text-align:right;">
--2.468
-</td>
-<td style="text-align:right;">
-0.015
-</td>
+<tr class="even">
+<td align="left">Immigration_Rate</td>
+<td align="right">-278.403</td>
+<td align="right">112.786</td>
+<td align="right">-2.468</td>
+<td align="right">0.015</td>
 </tr>
 </tbody>
 </table>
@@ -1148,7 +994,7 @@ id="fnref18"><sup>18</sup></a>.</p>
 </div>
 <div id="modelling" class="section level2">
 <h2>2.4 Modelling</h2>
-<p>To investigate which factors have positive effects on crime rate, we
+<p>To investigate how much the factors had effects on crime rate, we
 trained several models to predict the number of MCI offences (total
 count) using age, level of education, employment status, immigration and
 citizenship status, average income tax, number of visible minorities,
@@ -1156,10 +1002,10 @@ and population count, and number of airbnbs, gyms and venues.</p>
 <p>The baseline models were Poisson regression model and negative
 binomial regression model. The machine learning models trained were
 regression tree and random forest.</p>
-<p>With only 140 observations corresponding to each neighbourhood, a
+<p>With only 140 observations corresponding to the 140 neighbourhoods, a
 80-20 split was used as this ratio gave us enough data for both training
 and testing.</p>
-<p>A data frame with all variables (response and predictors) of interest
+<p>A data frame with all variables of interest (response and predictors)
 was created using R’s <code>merge</code> function, and new variables
 were created for regression: for each age group, the ratio between the
 size of that group and the size of working age group was created
@@ -1167,24 +1013,26 @@ size of that group and the size of working age group was created
 between the number of people of that level and that of no education was
 created (non-working as reference); for each work status, similar ratio
 was created (ratio between the number of people working
-full-time/part-time and that who did not work); and the proportion of
-immigrants and visible minority in each neighbourhood was created.</p>
-<p>For Poisson regression and negative binomial regression, a model with
-all the predictors was fitted, and the <code>step</code> function was
-used to perform backward stepwise regression with Akaike’s Information
-Criterion (AIC) as the penalty. Afterwards, the variance inflation
-factors (VIF) were checked using R’s <code>vif</code> function, and
-variables with VIF greater than 10 were removed and the model was
-refitted. The final Poisson and negative binomial models were used as
-baselines for comparing the performance against the machine learning
-models (see below).</p>
+full-time/part-time and that who did not work); and the proportions of
+immigrants and visible minorities in each neighbourhood were
+created.</p>
+<p>For Poisson regression and negative binomial regression, each had a
+model with all the predictors fitted, and the <code>step</code> function
+was used to perform backward stepwise regression with Akaike’s
+Information Criterion (AIC) as the penalty. Afterwards, the variance
+inflation factors (VIF) of each remaining predictors were checked using
+R’s <code>vif</code> function, and variables with VIF greater than 10
+were removed and the model was refitted and rechecked. The final Poisson
+and negative binomial models were used as baselines for performance
+comparison against the machine learning models.</p>
 <p>A regression tree was fitted using the <code>rpart</code> R library.
-The complexity parameter was chosen to be 0 (which resulted in a smaller
-number of tree pruning). A variable importance plot was then created to
-investigate which factors affect the MCI offence counts to the greatest
-extents. Note that all predictors were used in the regression model,
-whereas in the Poisson and negative binomial models above, some
-predictors were removed due to multicollinearity.</p>
+The complexity parameter was chosen to be 0 (which resulted in the least
+amount of tree pruning). A variable importance plot was then created to
+investigate which factors affected the MCI offence counts to the
+greatest extents. Note that all predictors were used in the regression
+model, whereas in the Poisson and negative binomial models, some
+predictors were removed due to multicollinearity and/or insignificance
+in the stepwise regression.</p>
 <p>Finally, a random forest was fitted using the
 <code>randomForest</code> package, which implemented Breiman’s random
 forest algorithm<a href="#fn19" class="footnote-ref"
@@ -1197,7 +1045,7 @@ rate the most, the model performances were evaluated using the
 mean-squared-error statistic: each model was used for prediction on both
 the training and testing data and the subsequent mean-squared-error for
 each data set was calculated. For the basic regression models, the AIC
-and the log-likelihood was also calculated for reference.</p>
+and the log-likelihood values were also calculated for reference.</p>
 </div>
 </div>
 <div id="results" class="section level1">
@@ -1210,471 +1058,216 @@ predictors with the exception of <code>part_time_ratio</code> (ratio
 between number of people working part time vs not working) and
 <code>secondary_ratio</code> (ratio between number of people with
 secondary level certificate vs no education/certificate).</p>
-<table class="kable_wrapper table" style="margin-left: auto; margin-right: auto;">
-<tbody>
-<tr>
-<td>
-<table class="table" style="width: auto !important; float: left; margin-right: 10px;">
-<caption>
-Coefficient Estimates of Poisson Regression Model for Estimating MCI
-Offence Count
-</caption>
+<table>
+<caption>Coefficient Estimates of Poisson Regression Model for
+Estimating MCI Offence Count</caption>
 <thead>
-<tr>
-<th style="text-align:left;">
-Terms
-</th>
-<th style="text-align:right;">
-Estimate
-</th>
-<th style="text-align:right;">
-Std. Error
-</th>
-<th style="text-align:right;">
-t-value
-</th>
-<th style="text-align:right;">
-p-value
-</th>
+<tr class="header">
+<th align="left">Terms</th>
+<th align="right">Estimate</th>
+<th align="right">Std. Error</th>
+<th align="right">t-value</th>
+<th align="right">p-value</th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td style="text-align:left;">
-(Intercept)
-</td>
-<td style="text-align:right;">
-5.659
-</td>
-<td style="text-align:right;">
-0.080
-</td>
-<td style="text-align:right;">
-70.971
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="odd">
+<td align="left">(Intercept)</td>
+<td align="right">5.659</td>
+<td align="right">0.080</td>
+<td align="right">70.971</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-airbnb
-</td>
-<td style="text-align:right;">
-0.000
-</td>
-<td style="text-align:right;">
-0.000
-</td>
-<td style="text-align:right;">
-7.897
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="even">
+<td align="left">airbnb</td>
+<td align="right">0.000</td>
+<td align="right">0.000</td>
+<td align="right">7.897</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-gyms
-</td>
-<td style="text-align:right;">
--0.080
-</td>
-<td style="text-align:right;">
-0.007
-</td>
-<td style="text-align:right;">
--11.191
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="odd">
+<td align="left">gyms</td>
+<td align="right">-0.080</td>
+<td align="right">0.007</td>
+<td align="right">-11.191</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-venues
-</td>
-<td style="text-align:right;">
-0.001
-</td>
-<td style="text-align:right;">
-0.000
-</td>
-<td style="text-align:right;">
-2.186
-</td>
-<td style="text-align:right;">
-0.029
-</td>
+<tr class="even">
+<td align="left">venues</td>
+<td align="right">0.001</td>
+<td align="right">0.000</td>
+<td align="right">2.186</td>
+<td align="right">0.029</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-population
-</td>
-<td style="text-align:right;">
-0.000
-</td>
-<td style="text-align:right;">
-0.000
-</td>
-<td style="text-align:right;">
-51.775
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="odd">
+<td align="left">population</td>
+<td align="right">0.000</td>
+<td align="right">0.000</td>
+<td align="right">51.775</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-children_ratio
-</td>
-<td style="text-align:right;">
--1.700
-</td>
-<td style="text-align:right;">
-0.089
-</td>
-<td style="text-align:right;">
--19.186
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="even">
+<td align="left">children_ratio</td>
+<td align="right">-1.700</td>
+<td align="right">0.089</td>
+<td align="right">-19.186</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-youth_ratio
-</td>
-<td style="text-align:right;">
-4.113
-</td>
-<td style="text-align:right;">
-0.118
-</td>
-<td style="text-align:right;">
-34.733
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="odd">
+<td align="left">youth_ratio</td>
+<td align="right">4.113</td>
+<td align="right">0.118</td>
+<td align="right">34.733</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-pre_retirement_ratio
-</td>
-<td style="text-align:right;">
--2.961
-</td>
-<td style="text-align:right;">
-0.208
-</td>
-<td style="text-align:right;">
--14.233
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="even">
+<td align="left">pre_retirement_ratio</td>
+<td align="right">-2.961</td>
+<td align="right">0.208</td>
+<td align="right">-14.233</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-seniors_ratio
-</td>
-<td style="text-align:right;">
--0.400
-</td>
-<td style="text-align:right;">
-0.097
-</td>
-<td style="text-align:right;">
--4.116
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="odd">
+<td align="left">seniors_ratio</td>
+<td align="right">-0.400</td>
+<td align="right">0.097</td>
+<td align="right">-4.116</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-postsecondary_ratio
-</td>
-<td style="text-align:right;">
--0.031
-</td>
-<td style="text-align:right;">
-0.002
-</td>
-<td style="text-align:right;">
--16.487
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="even">
+<td align="left">postsecondary_ratio</td>
+<td align="right">-0.031</td>
+<td align="right">0.002</td>
+<td align="right">-16.487</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-full_time_ratio
-</td>
-<td style="text-align:right;">
--0.100
-</td>
-<td style="text-align:right;">
-0.023
-</td>
-<td style="text-align:right;">
--4.276
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="odd">
+<td align="left">full_time_ratio</td>
+<td align="right">-0.100</td>
+<td align="right">0.023</td>
+<td align="right">-4.276</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-immigrants_ratio
-</td>
-<td style="text-align:right;">
--0.358
-</td>
-<td style="text-align:right;">
-0.020
-</td>
-<td style="text-align:right;">
--18.242
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="even">
+<td align="left">immigrants_ratio</td>
+<td align="right">-0.358</td>
+<td align="right">0.020</td>
+<td align="right">-18.242</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-visible_minority_ratio
-</td>
-<td style="text-align:right;">
-0.021
-</td>
-<td style="text-align:right;">
-0.003
-</td>
-<td style="text-align:right;">
-7.526
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="odd">
+<td align="left">visible_minority_ratio</td>
+<td align="right">0.021</td>
+<td align="right">0.003</td>
+<td align="right">7.526</td>
+<td align="right">0.000</td>
 </tr>
 </tbody>
 </table>
-</td>
-<td>
-<table class="table" style="width: auto !important; float: right; margin-left: 10px;">
-<caption>
-Coefficient Estimates of Negative Binomial Regression Model for
-Estimating MCI Offence Count
-</caption>
+<table>
+<caption>Coefficient Estimates of Negative Binomial Regression Model for
+Estimating MCI Offence Count</caption>
 <thead>
-<tr>
-<th style="text-align:left;">
-Terms
-</th>
-<th style="text-align:right;">
-Estimate
-</th>
-<th style="text-align:right;">
-Std. Error
-</th>
-<th style="text-align:right;">
-t-value
-</th>
-<th style="text-align:right;">
-p-value
-</th>
+<tr class="header">
+<th align="left">Terms</th>
+<th align="right">Estimate</th>
+<th align="right">Std. Error</th>
+<th align="right">t-value</th>
+<th align="right">p-value</th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td style="text-align:left;">
-(Intercept)
-</td>
-<td style="text-align:right;">
-5.057
-</td>
-<td style="text-align:right;">
-0.300
-</td>
-<td style="text-align:right;">
-16.841
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="odd">
+<td align="left">(Intercept)</td>
+<td align="right">5.057</td>
+<td align="right">0.300</td>
+<td align="right">16.841</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-gyms
-</td>
-<td style="text-align:right;">
--0.072
-</td>
-<td style="text-align:right;">
-0.033
-</td>
-<td style="text-align:right;">
--2.198
-</td>
-<td style="text-align:right;">
-0.028
-</td>
+<tr class="even">
+<td align="left">gyms</td>
+<td align="right">-0.072</td>
+<td align="right">0.033</td>
+<td align="right">-2.198</td>
+<td align="right">0.028</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-venues
-</td>
-<td style="text-align:right;">
-0.003
-</td>
-<td style="text-align:right;">
-0.002
-</td>
-<td style="text-align:right;">
-1.768
-</td>
-<td style="text-align:right;">
-0.077
-</td>
+<tr class="odd">
+<td align="left">venues</td>
+<td align="right">0.003</td>
+<td align="right">0.002</td>
+<td align="right">1.768</td>
+<td align="right">0.077</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-population
-</td>
-<td style="text-align:right;">
-0.000
-</td>
-<td style="text-align:right;">
-0.000
-</td>
-<td style="text-align:right;">
-12.022
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="even">
+<td align="left">population</td>
+<td align="right">0.000</td>
+<td align="right">0.000</td>
+<td align="right">12.022</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-children_ratio
-</td>
-<td style="text-align:right;">
--1.591
-</td>
-<td style="text-align:right;">
-0.460
-</td>
-<td style="text-align:right;">
--3.460
-</td>
-<td style="text-align:right;">
-0.001
-</td>
+<tr class="odd">
+<td align="left">children_ratio</td>
+<td align="right">-1.591</td>
+<td align="right">0.460</td>
+<td align="right">-3.460</td>
+<td align="right">0.001</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-youth_ratio
-</td>
-<td style="text-align:right;">
-3.945
-</td>
-<td style="text-align:right;">
-0.657
-</td>
-<td style="text-align:right;">
-6.004
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="even">
+<td align="left">youth_ratio</td>
+<td align="right">3.945</td>
+<td align="right">0.657</td>
+<td align="right">6.004</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-pre_retirement_ratio
-</td>
-<td style="text-align:right;">
--2.863
-</td>
-<td style="text-align:right;">
-0.691
-</td>
-<td style="text-align:right;">
--4.143
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="odd">
+<td align="left">pre_retirement_ratio</td>
+<td align="right">-2.863</td>
+<td align="right">0.691</td>
+<td align="right">-4.143</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-postsecondary_ratio
-</td>
-<td style="text-align:right;">
--0.042
-</td>
-<td style="text-align:right;">
-0.010
-</td>
-<td style="text-align:right;">
--4.057
-</td>
-<td style="text-align:right;">
-0.000
-</td>
+<tr class="even">
+<td align="left">postsecondary_ratio</td>
+<td align="right">-0.042</td>
+<td align="right">0.010</td>
+<td align="right">-4.057</td>
+<td align="right">0.000</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-immigrants_ratio
-</td>
-<td style="text-align:right;">
--0.253
-</td>
-<td style="text-align:right;">
-0.077
-</td>
-<td style="text-align:right;">
--3.265
-</td>
-<td style="text-align:right;">
-0.001
-</td>
+<tr class="odd">
+<td align="left">immigrants_ratio</td>
+<td align="right">-0.253</td>
+<td align="right">0.077</td>
+<td align="right">-3.265</td>
+<td align="right">0.001</td>
 </tr>
 </tbody>
 </table>
-</td>
-</tr>
-</tbody>
-</table>
-<p>The comparison table above shows the coefficient estimates of the
-predictors selected in the fitted Poisson and negative binomial models.
-Predictors which appeared in both model had highly similar coefficient
-estimates.</p>
-<p>In general, age group had the highest impact on the crime rate, as
+<p>The tables above show the coefficient estimates of the predictors
+selected in the fitted Poisson and negative binomial models. Predictors
+which appeared in both model had highly similar coefficient estimates.
+All predictors in both models, with the exception of the number of
+venues in the negative binomial model, were all statistically
+significant at the 5% level.</p>
+<p>In summary, age group had the highest impact on the crime rate, as
 reflected by the large magnitude of estimated coefficients. The ratio of
-visible to non-visible minorities, the number of venues all had a
-positive impact on the crime rate. The Poisson model suggested that the
-number of Airbnbs in the neighbourhood was not a significant factor of
-MCI offence counts. On the other hand, an increase in the number of
-gyms, the ratio of people with post-secondary education to one who did
-not have any certificates/education, and the ratio of immigrants to
-non-immigrants were all linked with a decrease in crime count, with
-immigrants playing the most impactful role.</p>
-<p>The predictors which was most impactful were the age groups: a
+visible to non-visible minorities, the number of venues all had positive
+impacts on the crime rate. The Poisson model suggested that the number
+of Airbnbs in the neighbourhood was not a significant factor of MCI
+offence counts. On the other hand, an increase in the number of gyms,
+the ratio of people with post-secondary education to one who did not
+have any certificates/education, and the ratio of immigrants to
+non-immigrants, were all linked with a decrease in crime count, with
+immigrants having the most impactful role.</p>
+<p>The estimated coefficients of the age groups were interesting: a
 one-unit increase in the ratio of the number of youths (15 - 24 years)
 to the number of working age people (25 - 54 years) had a multiplicative
 impact of 54 on the mean crime rate (a 53-times increase), while a
-one-unit increase in ratio of children (0 - 15 years) and pre-retirement
+one-unit increase in ratio of children (0 - 15 years) or pre-retirement
 ages (55 - 64 years) was predicted to decrease the mean crime rate by
 80% and 95% respectively. The p-values of estimated coefficients of the
 age group predictors were all very small, which confirmed that the
-proportion of different age groups had a statistically significant
+proportions of different age groups had a statistically significant
 impact on MCI offence counts in neighbourhoods.</p>
-<p>All predictors in both models, with the exception of the number of
-venues in the negative binomial model, were all statistically
-significant at the 5% level.</p>
 <div id="gjefpxuwkd" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>#gjefpxuwkd table {
   font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
@@ -2151,7 +1744,7 @@ higher training and testing MSEs (12793.42 vs Poisson’s 9247.67,
 17805.41 vs Poisson’s 15630.57), it had much lower AIC (1286.32 vs
 4167.50) and deviance (113.71 vs 3349.88). Despite their differences,
 both models could be adapted as baseline models to evaluate the
-performance of the advanced machine learning models.</p>
+performances of the advanced machine learning models.</p>
 </div>
 <div id="regression-tree-and-random-forest" class="section level2">
 <h2>3.2 Regression Tree and Random Forest</h2>
@@ -2632,7 +2225,9 @@ training and test MSE of 3113.12 and 10966.88 respectively.</p>
 <p>Despite the simplicity of the regression tree, it may be useful to
 use the model as a guideline to predict the MCI offence counts of a
 neighbourhood, or as a validation model to validate predictions from
-other models.</p>
+other models. However, it is not advisable to use the regression tree as
+a prediction model: the low number of leaves means the predicted values
+could be far from the true values.</p>
 <p><img src="Final-Report_files/figure-html/vip-plots-1.png" width="1728" /></p>
 <p>In general, both the regression tree and random forest suggested that
 population and the number of airbnbs were the most important factors of
@@ -2650,31 +2245,37 @@ proportion (ratio) of children and youths in the neighbourhood, and the
 ratio of visible_minorities vs non-visible minorities. In both models,
 the number of venues and gyms were some of the variables with the lowest
 importance.</p>
+<p>All four models suggested that age groups indeed had the most
+significant impact on crime rate. However, the number of Airbnbs had
+much higher significance (in terms of impact, not in the sense of
+p-value) in the fitted regression tree and random forest model, but not
+the regression baseline models. Nonetheless, all four models were
+similar in terms of variable (predictor) importances.</p>
 </div>
 </div>
 <div id="conclusions-and-summary" class="section level1">
 <h1>4. Conclusions and Summary</h1>
 <p>In this research study, we aimed to explore the relationship between
 Toronto’s neighbourhood crime rate and the neighbourhood’s demographics
-and the community amenities, and investigated which factors affect crime
-rate to the greatest extents. Poisson regression, negative binomial
-regression, regression tree and random forest models were deployed to
-understand this relationship. The fitted random forest model had the
-best performance in terms of training and testing mean-squared-error,
-followed by Poisson regression, negative binomial regression, and
-regression tree.</p>
+and the community amenities, and investigated which factors affected
+crime rate to the greatest extents. Poisson regression, negative
+binomial regression, regression tree and random forest models were
+deployed to understand this relationship. The fitted random forest model
+had the best performance in terms of training and testing
+mean-squared-error, followed by Poisson regression, negative binomial
+regression, and regression tree.</p>
 <p>Our research found out that the population played the largest role on
 a neighbourhood’s crime rate, followed by different age groups: the
 proportion of youths (15 - 24 years) were correlated with the highest
 increase in crime, while the proportions of children (0 - 15 years) and
 pre-retirement-aged people (55 - 64 years) were correlated with the
 largest drop in crime. The proportions of immigrants and visible
-minorities were also notable factors of crime, with neigbourhoods of
-higher proportion of immigrants and lower visible minorities having
-significantly fewer crime occurred. Moreover, people with post-secondary
-or secondary education are less likely to commit crime, while an
-increase in proportion of people with no certificates or education was
-connected to a higher crime rate.</p>
+minorities were also notable factors of crime, with neigbourhoods having
+higher proportion of immigrants and lower proportion of visible
+minorities having significantly fewer crime occurred. Moreover, people
+with post-secondary or secondary education are less likely to commit
+crime, while an increase in proportion of people with no certificates or
+education was connected to a higher crime rate.</p>
 <p>Consistent with previous studies, the number of Airbnb’s in the area
 was found to be highly correlated with an increase in crime rate.
 However, the number of venues (points-of-interests) and gyms did not
